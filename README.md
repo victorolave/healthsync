@@ -79,7 +79,7 @@ What this means right now:
 
 - [x] Define the product vision and the open-source foundations *(this README + license)*
 - [ ] Decide how the project will work (process, structure, conventions)
-- [ ] Specify the product (personas, use cases, scope)
+- [x] Specify the product — see the [PRD](./docs/PRD.md) *(personas, use cases, scope)*
 - [ ] Choose the technical foundations
 - [ ] Build the first working slice
 
