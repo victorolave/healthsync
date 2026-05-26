@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Approved |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Last updated** | 2026-05-25 |
 | **Owner** | victorolave |
 
@@ -72,11 +72,11 @@ A medical day rarely goes as planned. An emergency, a procedure that runs long, 
 
 ### 4.1 Natural-language intake
 
-Accept a free-text message from the doctor through a conversational channel. The doctor is never asked to fill a form or pick from menus.
+Accept a free-text message from the doctor through an **in-app chat** interface. The doctor is never asked to fill a form or pick from menus. *(Channel — decision D3, §10.)*
 
 ### 4.2 Intent & parameter understanding
 
-Translate the message into a **structured intent** plus its parameters. The initial intent taxonomy:
+Translate the message into a **structured intent** plus its parameters. The system understands messages in **Spanish** at launch *(decision D2, §10)*. The initial intent taxonomy:
 
 | Intent | Meaning | Key parameters |
 |--------|---------|----------------|
@@ -97,19 +97,23 @@ Apply the recalculated agenda by **shifting, compressing, rebooking, or cancelli
 
 ### 4.5 Patient notification
 
-Inform each impacted patient in **real time**, stating clearly **what changed** and, when relevant, **what they can do** (confirm, request a different time).
+Inform each impacted patient **in-app, in real time**, stating clearly **what changed** and, when relevant, **what they can do** (confirm, request a different time). *(Channel — decision D3, §10.)*
 
 ### 4.6 Confirmation model
 
-Before applying changes, the system can either **propose a plan for the doctor to confirm** or **act automatically** for high-confidence, low-risk cases. *(Which mode is default is an open question — see §10.)*
+The system **proposes a plan and the doctor confirms it** before any appointment is moved or any patient is notified. Nothing is applied automatically — a human stays in the loop for every change, the responsible default in a medical context. *(Decision D1, §10.)*
 
 ### 4.7 History & audit
 
 Keep a record of every interpreted message, the resulting plan, and the notifications sent — so changes are traceable and explainable.
 
+### 4.8 Conflict handling
+
+When a reshuffle has no clean solution (e.g., appointments overflow past closing), the system **proposes a resolution** — such as moving the overflowing appointments to the next available slot — and the **doctor confirms** before it is applied. Consistent with §4.6, the system never resolves a conflict on a patient's behalf without approval. *(Decision D4, §10.)*
+
 ## 5. Product Flow
 
-> The end-to-end loop, including the two decision points that make the logic non-trivial: **ambiguity** (clarify before acting) and the **confirmation model** (auto-apply vs. doctor review).
+> The end-to-end loop, including the two decision points that make the logic non-trivial: **ambiguity** (clarify before acting) and **confirmation** (the doctor approves every plan before it applies).
 
 ```mermaid
 flowchart TD
@@ -118,11 +122,10 @@ flowchart TD
     C -- "No / ambiguous" --> Q["❓ Ask one<br/>clarifying question"]
     Q --> M
     C -- "Yes" --> R["📅 Recalculate agenda<br/>(respect constraints)"]
-    R --> O["🔀 Reorganize<br/>appointments"]
-    O --> A{"Confirmation<br/>model"}
-    A -- "High confidence" --> N["🔔 Notify affected patients<br/>in real time"]
-    A -- "Needs review" --> D["✅ Doctor confirms the plan"]
-    D --> N
+    R --> O["🔀 Reorganize into<br/>a proposed plan"]
+    O --> A{"Doctor<br/>confirms?"}
+    A -- "No" --> X["✋ Discard — nothing changes"]
+    A -- "Yes" --> N["🔔 Notify affected patients<br/>in real time"]
     N --> H["🗂️ Record in history"]
 ```
 
@@ -184,11 +187,13 @@ flowchart TD
 
 ### 🔴 Must have — *V1 fails without these*
 
-- Natural-language intake through a single channel (§4.1).
+- Natural-language intake via **in-app chat** (§4.1).
+- **Spanish-language understanding** — the launch language (§4.2, D2).
 - Interpret **`DELAY`** and **`CANCEL_BLOCK`** into intent + parameters (§4.2).
 - Agenda recalculation respecting constraints (§4.3).
 - Appointment reorganization: shift and cancel (§4.4).
-- Real-time patient notification of what changed (§4.5).
+- **Propose-and-confirm**: the doctor approves every plan before it applies (§4.6, D1).
+- Real-time **in-app** patient notification of what changed (§4.5).
 - The **clarification path** for ambiguous messages (Scenario 5).
 - Basic change history (§4.7).
 - Single doctor, single working day, one timezone.
@@ -196,7 +201,6 @@ flowchart TD
 ### 🟡 Should have — *important, but V1 survives day one without them*
 
 - The `EARLY`, `EXTEND`, and `BLOCK_TIME` intents.
-- A **propose-and-confirm** confirmation model (§4.6).
 - Notification **delivery confirmation** and fallback.
 - Patient **accept/decline** on "come earlier" (Scenario 4).
 
@@ -205,7 +209,7 @@ flowchart TD
 - The `CANCEL_DAY` intent.
 - Rebooking **suggestions with options** for cancelled appointments.
 - Read-only visibility for a coordinator (Carla).
-- Smart suggestions when a reshuffle overflows the day.
+- Richer auto-proposed resolutions when a reshuffle overflows the day (§4.8, D4).
 
 ### ⚪ Won't have (this version) — *conscious exclusions that protect the core*
 
@@ -224,8 +228,8 @@ flowchart TD
 |-----------|----------------------|-------------------------------|
 | **More intents** | The taxonomy (§4.2) will keep growing (e.g., reschedule a specific patient, recurring series). | Treat the intent set as **open for extension**, not a fixed, hard-coded list baked into the flow. |
 | **Multi-doctor & coordinator role** | Carla's persona becomes active; clinics have many doctors. | Do **not** hard-code single-doctor assumptions into the agenda model. |
-| **Multiple channels** | Doctors and patients will use different channels to write and be notified. | Keep **intake** and **notification** channel-agnostic. |
-| **Multi-language understanding** | The audience is not limited to one language. | Keep **language understanding** separable from scheduling logic. |
+| **More channels** | Beyond in-app, doctors and patients may use external messaging to write and be notified. | Keep **intake** and **notification** channel-agnostic. |
+| **Multi-language understanding** | The audience is not limited to Spanish. | Keep **language understanding** separable from scheduling logic. |
 | **Patient-initiated negotiation** | Patients may want to propose alternatives, not just accept/decline. | Model the patient as an **active participant**, not only a recipient. |
 
 ## 9. Success Criteria
@@ -235,9 +239,9 @@ flowchart TD
 ### Product
 
 - **Interpretation accuracy:** the common scenarios (§6) are interpreted into the correct intent and parameters reliably.
-- **End-to-end automation:** an in-scope disruption is resolved with **a single message** and **no manual calendar editing**.
+- **End-to-end automation:** an in-scope disruption is resolved with **a single message** plus **one confirmation**, and **no manual calendar editing**.
 - **Notification completeness:** **no impacted patient is ever left un-notified**; no double-bookings; no lost appointments.
-- **Speed:** time from the doctor's message to all patients notified is perceived as **near real time**.
+- **Speed:** time from the doctor's confirmation to all patients notified is perceived as **near real time**.
 - **Safety:** ambiguous or risky cases are **escalated, never guessed**.
 
 ### Educational (workshop)
@@ -245,28 +249,28 @@ flowchart TD
 - The codebase reads clearly: each capability in §4 is **independently understandable**.
 - A participant can trace one scenario (§6) from message to notification and explain every step.
 
-## 10. Assumptions, Risks & Open Questions
+## 10. Assumptions, Risks & Decisions
 
 ### Assumptions
 
 - Doctors will trust automation enough to communicate in natural language rather than editing a calendar.
-- Patients are reachable through the chosen notification channel and will read messages in time.
+- Patients are reachable through the in-app notification and will read messages in time.
 - Appointments have known, reasonably accurate durations.
 
 ### Risks
 
-- **Misinterpretation (high stakes):** acting on a wrong intent could displace the wrong patients. Mitigation: confidence thresholds and the clarification path.
+- **Misinterpretation (high stakes):** acting on a wrong intent could displace the wrong patients. Mitigation: the clarification path and the doctor's confirmation gate (D1).
 - **Notification failure:** a patient who isn't reached effectively wasn't notified. Mitigation: delivery confirmation and fallbacks.
 - **Trust & safety in a medical context:** the cost of a logistics error is higher than in most consumer apps.
 
-### Open questions
+### Product decisions
 
-- **Confirmation model:** is the default **propose-and-confirm** or **auto-apply** for high-confidence cases? (§4.6)
-- **Language(s):** which language(s) must the system understand at launch?
-- **Channels:** through which channel does the doctor write, and through which are patients notified?
-- **Conflict resolution:** when a reshuffle has no clean solution (e.g., overflow past closing), what is the fallback policy?
+Resolved 2026-05-25 and reflected throughout this document.
 
-> These open questions are intentional. They are product decisions to be resolved before — or as part of — defining the technical foundations. They are **not** technology choices.
+- **D1 — Confirmation model:** **Propose-and-confirm.** The doctor approves every plan before any appointment is moved or any patient is notified. Nothing is applied automatically. (§4.6)
+- **D2 — Launch language:** **Spanish only.** Other languages stay on the radar (§8). (§4.2, §7)
+- **D3 — Channels:** **In-app chat** for both the doctor's input and patient notifications — self-contained and fully demoable. External messaging integration stays on the radar (§8). (§4.1, §4.5, §7)
+- **D4 — Conflict resolution:** when a reshuffle overflows, the system **auto-proposes a resolution and the doctor confirms** — consistent with D1. (§4.8)
 
 ---
 
@@ -275,3 +279,4 @@ flowchart TD
 | Version | Date | Status | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-05-25 | Approved | First version. |
+| 1.1 | 2026-05-25 | Approved | Resolved the four open product questions as decisions D1–D4 (confirmation model, launch language, channels, conflict handling) and reflected them throughout. |
