@@ -1,6 +1,6 @@
 # 3. Bounded contexts and module organization
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0006](./0006-distributed-architecture.md) — the *modular monolith* topology is replaced by a distributed multi-service architecture. The **bounded contexts defined here are retained** and now map onto services.
 - **Date:** 2026-05-27
 - **Deciders:** victorolave
 
