@@ -32,7 +32,7 @@ Chosen: **A. Synchronous REST (HTTP + JSON)** between the services, with the fol
 
 - **Scheduling (NestJS) ↔ Language (FastAPI):** a synchronous `HTTP POST /interpret` — NestJS sends the message (plus context), FastAPI returns the structured intent. NestJS then plans.
 - **NestJS is the Backend-for-Frontend (BFF):** the frontend's **only** backend. The Language service stays **internal** behind NestJS, never called from the browser.
-- **Frontend ↔ NestJS:** **REST** for commands (send message, confirm plan) plus a **real-time push channel** (WebSocket or SSE) for "plan ready" and patient notifications. *(The specific real-time transport is settled in ADR-0008 / at implementation.)*
+- **Frontend ↔ NestJS:** **REST** for commands (send message, confirm plan) plus a **real-time push channel** (WebSocket or SSE) for "plan ready" and patient notifications. *(The specific real-time transport is settled in [ADR-0012](./0012-realtime-transport.md).)*
 
 ```
 [ Frontend ]
@@ -73,4 +73,4 @@ Chosen: **A. Synchronous REST (HTTP + JSON)** between the services, with the fol
 - [ADR-0006](./0006-distributed-architecture.md) — the services this connects.
 - [ADR-0004](./0004-plan-as-unit-of-change.md) — NestJS computes the Plan after interpretation.
 - [PRD](../PRD.md) — D1 (confirm gate), D3 (in-app channel), §9 (near real-time).
-- Builds on this decision: ADR-0008 — frontend framework and remaining stack *(pending)*.
+- Builds on this decision: [ADR-0008](./0008-frontend-framework.md) — frontend framework and remaining stack.

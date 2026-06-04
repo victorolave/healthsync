@@ -62,4 +62,4 @@ Whether the **pending plan** (awaiting confirmation) is persisted or held in ses
 - [ADR-0006](./0006-distributed-architecture.md) — the Scheduling service (NestJS) owns this.
 - [ADR-0009](./0009-monorepo-strategy.md) — Postgres runs in the monorepo's docker-compose.
 - [PRD](../PRD.md) — §4.7 (history & audit).
-- Builds on this batch: ADR-0012 — real-time transport *(pending)*.
+- Builds on this batch: [ADR-0012](./0012-realtime-transport.md) — real-time transport.

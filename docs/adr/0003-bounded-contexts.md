@@ -82,4 +82,4 @@ Contexts communicate only through **explicit contracts** (application services o
 - [ADR-0002](./0002-hexagonal-architecture.md) — hexagonal architecture (this decision applies it per context).
 - [PRD](../PRD.md) — §8 (language/scheduling separability), §9 success criteria, D1 (confirm gate), D2 (Spanish), D3 (in-app channel).
 - Robert C. Martin, *Screaming Architecture*.
-- Builds on this decision: ADR-0004 — the core domain model (the *plan* as the unit of change) *(pending)*.
+- Builds on this decision: [ADR-0004](./0004-plan-as-unit-of-change.md) — the core domain model (the *plan* as the unit of change).

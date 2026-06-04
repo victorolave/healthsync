@@ -60,3 +60,4 @@ WebSocket would be bringing a full-duplex hammer to a one-directional nail; it i
 - [ADR-0007](./0007-inter-service-communication.md) — REST for commands + a real-time push channel (resolved here).
 - [ADR-0006](./0006-distributed-architecture.md) — NestJS is the frontend's backend.
 - [PRD](../PRD.md) — §9 (near real-time), D3 (in-app notifications).
+- Builds on this decision: [ADR-0013](./0013-notification-lifecycle.md) — notification acknowledgement & patient response.
