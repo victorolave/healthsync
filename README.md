@@ -83,6 +83,24 @@ What this means right now:
 - [ ] Choose the technical foundations
 - [ ] Build the first working slice
 
+## 🛠️ Development
+
+The monorepo contains three apps under `apps/`:
+
+| App | Stack | Port |
+|-----|-------|------|
+| `apps/language` | FastAPI (Python) | 8000 |
+| `apps/scheduling` | NestJS (TypeScript) | 3000 |
+| `apps/web` | React + Vite (TypeScript) | 5173 |
+
+Each app is self-contained with its own toolchain. To run everything at once:
+
+```bash
+docker compose up
+```
+
+See each app's `README.md` for local development instructions.
+
 ## 🤝 Contributing
 
 > [!NOTE]
