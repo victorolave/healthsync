@@ -65,4 +65,4 @@ The domain (agenda, plan, scheduling rules) sits at the center with **no depende
 
 - Alistair Cockburn, *Hexagonal Architecture (Ports and Adapters)*.
 - [PRD](../PRD.md) — §8 Future Vision (open-door design implications), decision D1 (propose-and-confirm), D3 (in-app channel).
-- Builds on this decision: ADR-0003 — bounded contexts & module organization *(pending)*.
+- Builds on this decision: [ADR-0003](./0003-bounded-contexts.md) — bounded contexts & module organization.

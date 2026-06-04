@@ -70,4 +70,4 @@ This makes propose-and-confirm a property of the model itself, not a convention 
 - [ADR-0002](./0002-hexagonal-architecture.md) — pure domain, no side effects.
 - [ADR-0003](./0003-bounded-contexts.md) — the Plan lives in the `scheduling/` core context; `app/` orchestrates confirm + apply; `notifications/` consumes the change-set.
 - [PRD](../PRD.md) — D1 (propose-and-confirm), D4 (overflow resolution), §4.3–§4.6.
-- Builds on this decision: ADR-0005 — intent representation & extensibility *(pending)*.
+- Builds on this decision: [ADR-0005](./0005-intent-extensibility.md) — intent representation & extensibility.

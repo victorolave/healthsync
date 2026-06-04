@@ -80,4 +80,4 @@ The **mechanics** of communication (synchronous vs. asynchronous, protocol, the 
 - [ADR-0003](./0003-bounded-contexts.md) — **superseded** (topology); its bounded contexts are retained as services.
 - [ADR-0004](./0004-plan-as-unit-of-change.md), [ADR-0005](./0005-intent-extensibility.md) — preserved across the split.
 - [PRD](../PRD.md) — D1, D2, D3.
-- Builds on this decision: ADR-0007 — inter-service communication *(pending)*.
+- Builds on this decision: [ADR-0007](./0007-inter-service-communication.md) — inter-service communication.
