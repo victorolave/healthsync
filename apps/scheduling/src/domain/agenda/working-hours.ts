@@ -7,6 +7,11 @@ export interface WorkingHours {
 }
 
 export function workingHours(open: LocalTime, close: LocalTime): WorkingHours {
+  if (close.compareTo(open) <= 0) {
+    throw new RangeError(
+      `WorkingHours close (${close.toString()}) must be strictly after open (${open.toString()})`,
+    );
+  }
   return Object.freeze({ open, close });
 }
 

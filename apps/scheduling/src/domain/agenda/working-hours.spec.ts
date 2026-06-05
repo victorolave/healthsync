@@ -41,6 +41,16 @@ describe('WorkingHours', () => {
     });
   });
 
+  describe('construction validation', () => {
+    it('throws RangeError when close is before open (inverted hours)', () => {
+      expect(() => workingHours(localTime(17, 0), localTime(9, 0))).toThrow(RangeError);
+    });
+
+    it('throws RangeError when close equals open (zero-duration working day)', () => {
+      expect(() => workingHours(localTime(9, 0), localTime(9, 0))).toThrow(RangeError);
+    });
+  });
+
   describe('immutability', () => {
     it('the returned WorkingHours is frozen', () => {
       expect(Object.isFrozen(wh)).toBe(true);
