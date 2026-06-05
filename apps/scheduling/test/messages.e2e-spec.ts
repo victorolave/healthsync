@@ -3,11 +3,14 @@ import { INestApplication, ServiceUnavailableException } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
-import { LanguageClient } from '../src/messages/language.client';
+import {
+  LANGUAGE_PORT,
+  LanguagePort,
+} from '../src/messages/application/language.port';
 
 describe('POST /messages (e2e)', () => {
   let app: INestApplication;
-  let languageClient: LanguageClient;
+  let language: jest.Mocked<LanguagePort>;
 
   const mockIntentResponse = {
     intent: { kind: 'DELAY', params: { minutes: 15 } },
@@ -18,7 +21,7 @@ describe('POST /messages (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(LanguageClient)
+      .overrideProvider(LANGUAGE_PORT)
       .useValue({
         interprets: jest.fn().mockResolvedValue(mockIntentResponse),
       })
@@ -28,7 +31,7 @@ describe('POST /messages (e2e)', () => {
     configureApp(app);
     await app.init();
 
-    languageClient = moduleFixture.get<LanguageClient>(LanguageClient);
+    language = moduleFixture.get<jest.Mocked<LanguagePort>>(LANGUAGE_PORT);
   });
 
   afterEach(async () => {
@@ -57,7 +60,7 @@ describe('POST /messages (e2e)', () => {
   });
 
   it('POST /messages → 503 { error: language_unavailable } when language throws', () => {
-    (languageClient.interprets as jest.Mock).mockRejectedValueOnce(
+    (language.interprets as jest.Mock).mockRejectedValueOnce(
       new ServiceUnavailableException({ error: 'language_unavailable' }),
     );
 

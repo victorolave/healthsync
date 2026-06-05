@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
-import { MessagesService } from './messages.service';
+import { MessagesService } from './application/messages.service';
 import { MessageDto } from './dto/message.dto';
 import { IntentResponseDto } from './dto/intent-response.dto';
 

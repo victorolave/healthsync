@@ -1,5 +1,15 @@
 # Design: Phase 0 — Walking Skeleton
 
+> **Refinement (post-review):** the outbound language seam is implemented as an
+> explicit hexagonal port, not a concrete client. `LanguagePort` (interface, in
+> `messages/application/`) is the port; `HttpLanguageAdapter` (in
+> `messages/infrastructure/`) is the adapter implementing it with `fetch`;
+> `MessagesService` depends on the port, injected by the `LANGUAGE_PORT` token.
+> Where this document says `LanguageClient` below, read `LanguagePort` (interface)
+> + `HttpLanguageAdapter` (implementation). This aligns the seam with ADR-0002
+> from Phase 0; the full domain/application/infrastructure structure still lands
+> in Phase 1/2.
+
 ## Technical Approach
 
 Prove the inter-service HTTP round-trip web → scheduling → language → back, with

@@ -1,13 +1,18 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { IntentResponseDto } from './dto/intent-response.dto';
+import { IntentResponseDto } from '../dto/intent-response.dto';
+import { LanguagePort } from '../application/language.port';
 
+/**
+ * HTTP adapter implementing the LanguagePort against the FastAPI language
+ * service over synchronous REST (ADR-0007). Uses native fetch with a 5s
+ * timeout; any failure surfaces as a 503 so the BFF degrades cleanly.
+ */
 @Injectable()
-export class LanguageClient {
+export class HttpLanguageAdapter implements LanguagePort {
   private readonly languageUrl: string;
 
   constructor() {
-    this.languageUrl =
-      process.env.LANGUAGE_URL ?? 'http://localhost:8000';
+    this.languageUrl = process.env.LANGUAGE_URL ?? 'http://localhost:8000';
   }
 
   async interprets(message: string): Promise<IntentResponseDto> {

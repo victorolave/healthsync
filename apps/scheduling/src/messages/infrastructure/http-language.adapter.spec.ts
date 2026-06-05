@@ -1,14 +1,14 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { LanguageClient } from './language.client';
+import { HttpLanguageAdapter } from './http-language.adapter';
 
-describe('LanguageClient', () => {
-  let client: LanguageClient;
+describe('HttpLanguageAdapter', () => {
+  let adapter: HttpLanguageAdapter;
   const originalFetch = global.fetch;
   const originalEnv = process.env.LANGUAGE_URL;
 
   beforeEach(() => {
-    client = new LanguageClient();
     process.env.LANGUAGE_URL = 'http://localhost:8000';
+    adapter = new HttpLanguageAdapter();
   });
 
   afterEach(() => {
@@ -32,7 +32,7 @@ describe('LanguageClient', () => {
       json: jest.fn().mockResolvedValueOnce(mockResponse),
     } as unknown as Response);
 
-    const result = await client.interprets('push my 3pm back');
+    const result = await adapter.interprets('push my 3pm back');
 
     expect(global.fetch).toHaveBeenCalledWith(
       'http://localhost:8000/interpret',
@@ -52,25 +52,29 @@ describe('LanguageClient', () => {
       json: jest.fn().mockResolvedValueOnce({}),
     } as unknown as Response);
 
-    await expect(client.interprets('test')).rejects.toThrow(
+    await expect(adapter.interprets('test')).rejects.toThrow(
       ServiceUnavailableException,
     );
   });
 
   it('throws ServiceUnavailableException when fetch rejects (connection refused)', async () => {
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Connection refused'));
+    global.fetch = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('Connection refused'));
 
-    await expect(client.interprets('test')).rejects.toThrow(
+    await expect(adapter.interprets('test')).rejects.toThrow(
       ServiceUnavailableException,
     );
   });
 
   it('throws ServiceUnavailableException when AbortController timeout fires', async () => {
     global.fetch = jest.fn().mockRejectedValueOnce(
-      Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }),
+      Object.assign(new Error('The operation was aborted'), {
+        name: 'AbortError',
+      }),
     );
 
-    await expect(client.interprets('test')).rejects.toThrow(
+    await expect(adapter.interprets('test')).rejects.toThrow(
       ServiceUnavailableException,
     );
   });

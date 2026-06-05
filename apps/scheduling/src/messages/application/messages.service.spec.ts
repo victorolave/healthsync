@@ -1,11 +1,11 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { MessagesService } from './messages.service';
-import { LanguageClient } from './language.client';
-import { MessageDto } from './dto/message.dto';
+import { LanguagePort } from './language.port';
+import { MessageDto } from '../dto/message.dto';
 
 describe('MessagesService', () => {
   let service: MessagesService;
-  let languageClient: jest.Mocked<LanguageClient>;
+  let language: jest.Mocked<LanguagePort>;
 
   const mockIntentResponse = {
     intent: { kind: 'DELAY', params: { minutes: 15 } },
@@ -13,25 +13,22 @@ describe('MessagesService', () => {
   };
 
   beforeEach(() => {
-    languageClient = {
-      interprets: jest.fn(),
-    } as unknown as jest.Mocked<LanguageClient>;
-
-    service = new MessagesService(languageClient);
+    language = { interprets: jest.fn() };
+    service = new MessagesService(language);
   });
 
   it('returns the language response unchanged', async () => {
-    languageClient.interprets.mockResolvedValueOnce(mockIntentResponse);
+    language.interprets.mockResolvedValueOnce(mockIntentResponse);
 
     const dto: MessageDto = { message: 'push my 3pm back 30 min' };
     const result = await service.process(dto);
 
-    expect(languageClient.interprets).toHaveBeenCalledWith(dto.message);
+    expect(language.interprets).toHaveBeenCalledWith(dto.message);
     expect(result).toEqual(mockIntentResponse);
   });
 
-  it('re-throws ServiceUnavailableException when client throws', async () => {
-    languageClient.interprets.mockRejectedValueOnce(
+  it('re-throws ServiceUnavailableException when the port throws', async () => {
+    language.interprets.mockRejectedValueOnce(
       new ServiceUnavailableException({ error: 'language_unavailable' }),
     );
 
