@@ -1,0 +1,73 @@
+project: healthsync
+initialized: 2026-06-05
+artifact_store: hybrid
+sdd_version: "3.0"
+
+context:
+  description: "HealthSync — AI scheduling assistant for doctors (Spanish NLU, hexagonal, distributed microservices)"
+  monorepo: true
+  apps: [language, scheduling, web]
+  architecture: hexagonal-clean (ADR-0002), distributed services (ADR-0006)
+  build_plan: docs/BUILD-PLAN.md (6 phases, walking-skeleton-first)
+  git: "conventional commits; branch → PR → merge-commit (no squash); no AI attribution"
+
+stack:
+  language:
+    runtime: Python 3.11+
+    framework: FastAPI + Uvicorn
+    config: apps/language/pyproject.toml
+  scheduling:
+    runtime: Node.js
+    framework: NestJS (TypeScript)
+    config: apps/scheduling/package.json
+  web:
+    runtime: Node.js
+    framework: React 19 + Vite + TypeScript
+    config: apps/web/package.json
+
+testing:
+  strict_tdd: true
+  active_app: scheduling
+  capabilities:
+    scheduling:
+      unit:
+        available: true
+        runner: jest
+        command: "cd apps/scheduling && pnpm test"
+        coverage: "cd apps/scheduling && pnpm test:cov"
+        spec_pattern: "src/**/*.spec.ts"
+      e2e:
+        available: true
+        runner: jest
+        command: "cd apps/scheduling && pnpm test:e2e"
+        config: apps/scheduling/test/jest-e2e.json
+        spec_pattern: "test/**/*.e2e-spec.ts"
+      linter: "cd apps/scheduling && pnpm lint"
+      formatter: "cd apps/scheduling && pnpm format"
+    language:
+      unit:
+        available: false
+        reason: "No pytest or test dependency in pyproject.toml"
+      linter: null
+    web:
+      unit:
+        available: false
+        reason: "No vitest or jest in devDependencies; only eslint configured"
+      linter: "cd apps/web && pnpm lint"
+  makefile_shortcut: "make test  # runs scheduling unit tests only"
+
+phases:
+  proposal:
+    instruction: "Propose approach referencing relevant ADRs and BUILD-PLAN.md phases"
+  spec:
+    instruction: "Write acceptance criteria as PRD scenario → test mapping"
+  design:
+    instruction: "Apply hexagonal architecture: domain first, then ports, then adapters"
+  tasks:
+    instruction: "Break into vertical slices per BUILD-PLAN.md phase order"
+  apply:
+    instruction: "Build domain test-first (strict TDD for scheduling); no NestJS/DB in domain"
+  verify:
+    instruction: "Validate against spec; run pnpm test in apps/scheduling"
+  archive:
+    instruction: "Persist final state and lessons to engram + openspec/changes/archive/"
