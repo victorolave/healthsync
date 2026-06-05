@@ -93,13 +93,28 @@ The monorepo contains three apps under `apps/`:
 | `apps/scheduling` | NestJS (TypeScript) | 3000 |
 | `apps/web` | React + Vite (TypeScript) | 5173 |
 
-Each app is self-contained with its own toolchain. To run everything at once:
+Each app is self-contained with its own toolchain.
+
+**Local (no Docker)** — requires Python ≥ 3.11, Node, and pnpm. A `Makefile` at the
+repo root orchestrates the three apps:
+
+```bash
+make install   # install dependencies for all three apps
+make dev       # run all three in parallel (Ctrl-C stops all)
+make help      # list every target
+```
+
+You can also run a single service: `make dev-language`, `make dev-scheduling`,
+or `make dev-web`. If your default `python3` is older than 3.11, point the venv
+at a newer one: `make install PYTHON=python3.12`.
+
+**Docker** — run everything in containers (also starts Postgres):
 
 ```bash
 docker compose up
 ```
 
-See each app's `README.md` for local development instructions.
+See each app's `README.md` for more detail.
 
 ## 🤝 Contributing
 
