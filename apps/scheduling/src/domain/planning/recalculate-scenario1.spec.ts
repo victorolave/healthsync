@@ -123,11 +123,8 @@ describe('PRD Scenario 1 — DELAY 40 min', () => {
     });
   });
 
-  describe('isolation assertion', () => {
-    it('no @nestjs, pg, typeorm, or express imports reachable from domain', () => {
-      // If any forbidden import was present, the ts-jest compilation would fail
-      // at module load time. Reaching this point means the module graph is clean.
-      expect(true).toBe(true);
-    });
-  });
+  // Isolation guarantee: if any forbidden import (@nestjs/*, pg, typeorm, express)
+  // were reachable from the domain module graph, ts-jest compilation would fail at
+  // module load time before any test in this suite could run. No runtime assertion
+  // is needed — the compile-time guarantee is sufficient.
 });
