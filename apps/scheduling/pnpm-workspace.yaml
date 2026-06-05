@@ -1,2 +1,6 @@
-allowBuilds:
-  '@nestjs/core': true
+# pnpm 11 reads build-script approvals from here (the package.json `pnpm` field
+# is deprecated). apps/scheduling is the workspace root for its own toolchain
+# (ADR-0009: each app self-contained), so this lives in the app, not the repo root.
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - unrs-resolver
