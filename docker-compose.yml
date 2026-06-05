@@ -1,0 +1,29 @@
+services:
+  language:
+    build: ./apps/language
+    ports:
+      - "8000:8000"
+
+  scheduling:
+    build: ./apps/scheduling
+    ports:
+      - "3000:3000"
+
+  web:
+    build: ./apps/web
+    ports:
+      - "5173:5173"
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: healthsync
+      POSTGRES_PASSWORD: healthsync
+      POSTGRES_DB: healthsync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
