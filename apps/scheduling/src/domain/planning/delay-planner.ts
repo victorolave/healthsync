@@ -1,5 +1,5 @@
 import type { Agenda } from '../agenda/agenda';
-import { timeSlot } from '../agenda/time-slot';
+import { shiftBy } from '../agenda/time-slot';
 import { slotOverflowsClose } from '../agenda/working-hours';
 import type { Intent } from '../intent/intent';
 import type { Conflict, MovePlanOperation, PlanOperation } from '../plan/plan';
@@ -15,10 +15,7 @@ export class DelayPlanner implements Planner {
     const conflicts: Conflict[] = [];
 
     for (const appt of agenda.appointments) {
-      const movedSlot = timeSlot(
-        appt.slot.start.plusMinutes(minutes),
-        appt.slot.end.plusMinutes(minutes),
-      );
+      const movedSlot = shiftBy(appt.slot, minutes);
 
       const moveOp: MovePlanOperation = {
         type: 'move',
