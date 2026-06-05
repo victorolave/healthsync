@@ -17,6 +17,11 @@ export class LocalTime {
 
   plusMinutes(n: number): LocalTime {
     const result = this.minutesSinceMidnight + n;
+    if (result < 0) {
+      throw new RangeError(
+        `plusMinutes(${n}) underflows below 00:00 from ${this.toString()}`,
+      );
+    }
     if (result > 23 * 60 + 59) {
       throw new RangeError(
         `plusMinutes(${n}) overflows past 23:59 from ${this.toString()}`,

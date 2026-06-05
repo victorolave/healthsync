@@ -38,6 +38,15 @@ describe('LocalTime', () => {
     it('throws RangeError when result overflows past midnight (23:30 + 40)', () => {
       expect(() => localTime(23, 30).plusMinutes(40)).toThrow(RangeError);
     });
+
+    it('throws RangeError when result underflows below 00:00 (00:00 + -1)', () => {
+      expect(() => localTime(0, 0).plusMinutes(-1)).toThrow(RangeError);
+    });
+
+    it('returns an equal LocalTime when plusMinutes(0) is called (identity)', () => {
+      const t = localTime(14, 30);
+      expect(t.plusMinutes(0).toString()).toBe('14:30');
+    });
   });
 
   describe('isAfter()', () => {
