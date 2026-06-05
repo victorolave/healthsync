@@ -8,7 +8,7 @@
 
   <p>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-1E6FD9?style=flat-square" alt="License: GPL v3" /></a>
-    <a href="#-project-status"><img src="https://img.shields.io/badge/status-early%20%2F%20defining-F59E0B?style=flat-square" alt="Status: early / defining" /></a>
+    <a href="#-project-status"><img src="https://img.shields.io/badge/status-early%20%2F%20building-F59E0B?style=flat-square" alt="Status: early / building" /></a>
     <img src="https://img.shields.io/badge/Dev%20Senior%20Code-workshop-16C2A3?style=flat-square" alt="Dev Senior Code workshop" />
   </p>
 
@@ -64,24 +64,26 @@ It is **open for extension**: if the project finds momentum beyond the workshop,
 ## 🚧 Project status
 
 > [!IMPORTANT]
-> **Early — we are still defining how the project will work.**
+> **Early — the foundations are set; the first working slice is in progress.**
 >
-> There is **no code yet**, and technologies, architecture, and methodology are intentionally **not decided**. We are starting from the product and the foundations, on purpose, before writing a single line of implementation.
+> The product is specified, the architecture and technology are decided, and the monorepo is scaffolded. What's still missing is the domain logic that turns a message into a rescheduled day.
 
 What this means right now:
 
-- The shape of the project (stack, structure, process) is open and will be decided deliberately.
-- Product specification and architecture docs will be added **once we define how the project works**.
+- The product is specified — see the [PRD](./docs/PRD.md) *(personas, scenarios, scope)*.
+- Architecture and technology are decided and recorded as [ADRs](./docs/adr/) *(hexagonal, distributed services, the chosen stack)*.
+- The monorepo is scaffolded: the three apps under `apps/` each start and answer a health check — see [Development](#-development).
+- Next: build the first end-to-end slice (interpret a message → propose a plan → notify).
 
 ## 🗺️ Roadmap
 
 > A high-level direction, not a commitment to scope or dates.
 
 - [x] Define the product vision and the open-source foundations *(this README + license)*
-- [ ] Decide how the project will work (process, structure, conventions)
+- [x] Decide how the project will work *(monorepo, ADR-driven design, branch + PR conventions)*
 - [x] Specify the product — see the [PRD](./docs/PRD.md) *(personas, use cases, scope)*
-- [ ] Choose the technical foundations
-- [ ] Build the first working slice
+- [x] Choose the technical foundations — see the [ADRs](./docs/adr/)
+- [ ] Build the first working slice *(monorepo scaffolded; domain logic next)*
 
 ## 🛠️ Development
 
