@@ -2,13 +2,11 @@
    Tailwind v4 CSS-first: @import activates the engine, @theme maps brand tokens.
    No tailwind.config.js needed. */
 
+/* Google Fonts must come first (before @tailwindcss) to satisfy CSS @import ordering */
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Inter:wght@400;500&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* ------------------------------------------------------------------ */
-/* Google Fonts — Figtree (display/headings) + Inter (body/UI)        */
-/* ------------------------------------------------------------------ */
-@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Inter:wght@400;500&display=swap");
 
 /* ------------------------------------------------------------------ */
 /* Brand design tokens (shadcn cssVariables convention)               */
