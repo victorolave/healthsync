@@ -71,6 +71,7 @@ class TestInterpretAcceptanceCases:
         assert r.status_code == 200
         data = r.json()
         assert data["intent"]["kind"] == "DELAY"
+        assert data["intent"]["params"]["minutes"] == 10
         assert data["confidence"] < 0.7
 
 
@@ -86,6 +87,12 @@ class TestInterpretErrorPaths:
         """FastAPI/Pydantic rejects blank message (min_length=1) before hitting interpreter."""
         client = _override(FakeInterpreter(response=_delay(10, 0.9)))
         r = client.post("/interpret", json={"message": ""})
+        assert r.status_code == 422
+
+    def test_422_whitespace_only_message(self) -> None:
+        """Whitespace-only strings are stripped then rejected by min_length=1."""
+        client = _override(FakeInterpreter(response=_delay(10, 0.9)))
+        r = client.post("/interpret", json={"message": "   "})
         assert r.status_code == 422
 
     def test_422_missing_message_field(self) -> None:

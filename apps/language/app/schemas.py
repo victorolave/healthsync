@@ -8,11 +8,18 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InterpretRequest(BaseModel):
-    """POST /interpret request body."""
+    """POST /interpret request body.
+
+    str_strip_whitespace=True strips leading/trailing whitespace before
+    min_length=1 is evaluated, so whitespace-only strings (e.g. "  ") are
+    rejected with a 422 rather than forwarded to the LLM.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     message: str = Field(..., min_length=1)
 
