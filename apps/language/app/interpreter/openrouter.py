@@ -10,6 +10,7 @@ import json
 
 import openai
 from openai import AsyncOpenAI
+from pydantic import ValidationError
 
 from app.config import Settings
 from app.errors import InterpretationError, LLMUnavailableError
@@ -26,10 +27,15 @@ class OpenRouterInterpreter:
             # service can still start and serve /health without a key.
             self._client: AsyncOpenAI | None = None
         else:
+            # max_retries=0: the SDK default is 2, and the 4s timeout is
+            # per-attempt — 3 attempts + backoff ≈ 13s total, which violates
+            # ADR-0007's "strictly below 5s" budget. A single attempt makes
+            # the 4s timeout a hard total bound.
             self._client = AsyncOpenAI(
                 api_key=settings.openrouter_api_key,
                 base_url="https://openrouter.ai/api/v1",
                 timeout=settings.request_timeout,
+                max_retries=0,
             )
         self._model = settings.llm_model
 
@@ -75,7 +81,7 @@ class OpenRouterInterpreter:
             output = ToolOutput.model_validate(parsed)
         except InterpretationError:
             raise
-        except (json.JSONDecodeError, Exception) as exc:
+        except (json.JSONDecodeError, ValidationError, IndexError, AttributeError, TypeError) as exc:
             raise InterpretationError(f"Failed to parse emit_intent output: {exc}") from exc
 
         return tool_output_to_response(output)
