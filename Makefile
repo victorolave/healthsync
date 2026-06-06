@@ -28,7 +28,7 @@ VENV := $(LANGUAGE_DIR)/.venv
 
 .PHONY: help install install-language install-scheduling install-web \
         dev dev-language dev-scheduling dev-web \
-        build build-scheduling build-web test health clean
+        build build-scheduling build-web test test-scheduling test-language health clean
 
 help: ## Show this help
 	@echo "HealthSync — local dev (no Docker)"
@@ -40,10 +40,10 @@ help: ## Show this help
 
 install: install-language install-scheduling install-web ## Install all dependencies
 
-install-language: ## Create the venv (Python >=3.11) and install language deps
+install-language: ## Create the venv (Python >=3.11) and install language deps (including dev extras)
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/pip install --upgrade pip
-	$(VENV)/bin/pip install -e $(LANGUAGE_DIR)
+	$(VENV)/bin/pip install -e "$(LANGUAGE_DIR)[dev]"
 
 install-scheduling: ## Install scheduling (NestJS) deps
 	cd $(SCHEDULING_DIR) && $(PNPM) install
@@ -82,8 +82,13 @@ build-scheduling:
 build-web:
 	cd $(WEB_DIR) && $(PNPM) build
 
-test: ## Run scheduling unit tests
+test: test-scheduling test-language ## Run all tests (scheduling + language)
+
+test-scheduling: ## Run scheduling unit tests
 	cd $(SCHEDULING_DIR) && $(PNPM) test
+
+test-language: ## Run language service tests (offline; live test self-skips without OPENROUTER_API_KEY)
+	cd $(LANGUAGE_DIR) && .venv/bin/pytest
 
 health: ## Check /health of the running language + scheduling services
 	@curl -s --max-time 2 localhost:$(LANGUAGE_PORT)/health && echo "  <- language"   || echo "language: DOWN"
