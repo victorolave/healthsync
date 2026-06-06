@@ -12,7 +12,7 @@ No domain logic, no real NLU, no database. Contracts only.
 ## Agreed contract (stable from Phase 0 through Phase 3)
 
 The intent is **data** in the ADR-0005 `{ kind, params }` shape. `language` MUST
-return, and `scheduling` MUST pass through, this body:
+return, and `scheduling` MUST forward to its domain layer, this body:
 
 ```json
 {
@@ -27,6 +27,12 @@ return, and `scheduling` MUST pass through, this body:
 - The `intent` (`{ kind, params }`) and `confidence` envelope MUST NOT be renamed
   or restructured — Phase 1 planners key off `intent.kind` and read `intent.params`.
 
+**Phase 2 change**: `scheduling POST /messages` no longer proxies the raw language
+response to the caller. Instead, it loads an `Agenda`, runs `recalculate`, and
+returns a typed `PlanResponseDto` with operations, conflicts, and the confidence
+value passed through unchanged. The language contract (`{ intent, confidence }`) is
+stable; the `scheduling` boundary response shape changed to `{ status, operations[], conflicts[], confidence }`.
+
 ### Endpoints
 
 - **language** — `POST /interpret`, request `{ "message": string }`.
@@ -36,6 +42,67 @@ return, and `scheduling` MUST pass through, this body:
 
 ## Requirements
 
+---
+
+## Data shapes (Phase 2)
+
+### Requirement: PlanResponseDto
+
+`PlanResponseDto` MUST be the shape returned by `POST /messages` on success (Phase 2+):
+
+```typescript
+interface TimeSlotDto {
+  start: string;  // HH:MM
+  end: string;    // HH:MM
+}
+
+interface PlanOperationDto {
+  type: 'move';
+  appointmentId: string;
+  patientId: string;
+  from: TimeSlotDto;
+  to: TimeSlotDto;
+}
+
+interface ConflictDto {
+  appointmentId: string;
+  reason: 'OVERFLOWS_CLOSING';
+  proposedSlot: TimeSlotDto;
+}
+
+interface PlanResponseDto {
+  status: 'proposed';
+  operations: PlanOperationDto[];
+  conflicts: ConflictDto[];
+  confidence: number;
+}
+```
+
+`status` MUST always be the string literal `'proposed'` in Phase 2. The field
+exists to allow Phase 4 to introduce `'applied'` and `'confirmed'` without
+breaking the envelope shape.
+
+`time` fields (`start`, `end`) MUST be serialized as `HH:MM` strings. `LocalTime`
+instances MUST be explicitly converted via `LocalTime.toString()` before being
+placed in the DTO. JSON.stringify does NOT call `toString()` on nested class
+instances — this is a silent-bug risk if conversion is omitted.
+
+#### Scenario: time fields are HH:MM strings, not objects
+
+- GIVEN `recalculate` returns a `Plan` where `operations[0].to.start = LocalTime.of(14, 40)`
+- WHEN `mapPlanToDto` converts the plan to `PlanResponseDto`
+- THEN `dto.operations[0].to.start` equals the string `'14:40'`
+- AND `dto.operations[0].to.end` equals the string `'15:10'`
+- AND neither field is a `LocalTime` instance or a plain object
+
+#### Scenario: zero-padding is preserved in serialized times
+
+- GIVEN an operation has `from.start = LocalTime.of(9, 5)`
+- WHEN `mapPlanToDto` converts it
+- THEN `dto.operations[0].from.start` equals `'09:05'`
+
+---
+
 ### Requirement: Web-to-Scheduling REST submission
 
 The web app MUST expose a text input and a submit control that POST the doctor's
@@ -43,12 +110,14 @@ message to `scheduling POST /messages`. On a successful response it MUST render 
 returned intent structure in the UI. The web app MUST NOT call `language`
 directly — `scheduling` is the only backend for the frontend (ADR-0007 BFF rule).
 
-#### Scenario: Happy-path round-trip renders DELAY intent
+#### Scenario: Happy-path round-trip renders a proposed Plan (Phase 2+)
 
 - GIVEN the web app is running and `scheduling` is reachable at its configured URL
+- AND a working-hours record exists for the hardcoded doctor on today's date
 - WHEN the doctor types any non-empty message and submits
 - THEN the web app POSTs `{ "message": "<text>" }` to `scheduling POST /messages`
-- AND the UI renders the returned intent — `DELAY` with `params.minutes: 15`
+- AND the UI renders the returned `PlanResponseDto` — `{ status: 'proposed', operations[], conflicts[], confidence }`
+- AND `operations[0].type` is `'move'` and times are formatted as `'HH:MM'` strings
 
 #### Scenario: Empty message is not submitted
 
@@ -59,31 +128,55 @@ directly — `scheduling` is the only backend for the frontend (ADR-0007 BFF rul
 
 ---
 
-### Requirement: Scheduling interprets and proxies
+### Requirement: Scheduling orchestrates message → Plan
 
 `scheduling` MUST expose `POST /messages` accepting `{ "message": string }`.
-It MUST forward the message to `language POST /interpret` via synchronous
-HTTP+JSON and return the response body unchanged to the caller (ADR-0007). It MUST
-NOT add domain logic, modify the intent payload, or persist anything.
+It MUST forward the message to `language POST /interpret` via synchronous HTTP+JSON
+to obtain the intent, then use that intent to calculate a proposed plan using the
+scheduling domain (Phase 1) and return a typed `PlanResponseDto` to the caller.
 
-#### Scenario: scheduling proxies language's response unchanged
+The language contract (`{ intent: { kind, params }, confidence }`) is **internal** —
+not exposed to the caller. The caller receives the calculated plan and conflicts.
 
-- GIVEN `language` is running and `scheduling` has `LANGUAGE_URL` configured
+#### Scenario: happy-path DELAY message over a persisted Agenda yields a proposed Plan (Phase 2+)
+
+- GIVEN working-hours `09:00–17:00` exists for the hardcoded doctor on today's date
+- AND four appointments exist for that doctor on today's date
+- AND `language.interprets` returns `{ intent: { kind: 'DELAY', params: { minutes: 15 } }, confidence: 0.97 }`
 - WHEN `scheduling POST /messages` receives `{ "message": "Voy a llegar 15 minutos tarde" }`
-- THEN `scheduling` calls `language POST /interpret` with `{ "message": "Voy a llegar 15 minutos tarde" }`
-- AND `scheduling` returns the exact JSON body that `language` responded with
-- AND the HTTP status code returned to the caller is 200
+- THEN the HTTP response status is 200
+- AND the response body is a `PlanResponseDto` with:
+  - `status: 'proposed'`
+  - `operations[]` containing move operations with times as `'HH:MM'` strings
+  - `conflicts[]` (empty if no conflicts)
+  - `confidence: 0.97` (passed through from language unchanged)
 
-#### Scenario: scheduling returns 200 with the DELAY contract on any message
+#### Scenario: confidence passes through unchanged
 
-- GIVEN `language` is running
-- WHEN `scheduling POST /messages` receives any valid `{ "message": string }` body
-- THEN the response body is `{ "intent": { "kind": "DELAY", "params": { "minutes": 15 } }, "confidence": 1.0 }`
-- AND the Content-Type is `application/json`
+- GIVEN `language.interprets` returns `confidence: 0.74`
+- WHEN `scheduling POST /messages` is handled successfully
+- THEN the returned `PlanResponseDto.confidence` equals `0.74`
+- AND the value is not rounded, clamped, or modified
 
 ---
 
-### Requirement: Language returns hard-coded DELAY intent
+### Requirement: Agenda-not-found returns HTTP 422 (Phase 2+)
+
+When a doctor's `Agenda` cannot be loaded for today's date (no working-hours record),
+`POST /messages` MUST return HTTP 422 Unprocessable Entity. It MUST NOT return 404, 500,
+or an empty `PlanResponseDto`.
+
+#### Scenario: no Agenda for today returns 422
+
+- GIVEN no working-hours record exists for the hardcoded doctor on today's date
+- WHEN `POST /messages` receives `{ "message": "Voy a llegar tarde" }`
+- THEN the HTTP response status is 422
+- AND the response body contains an error indicator (e.g., `{ "error": "agenda_not_found" }`)
+- AND the response is NOT 200, 404, or 500
+
+---
+
+### Requirement: Language returns hard-coded DELAY intent (stable, Phase 0+)
 
 `language` MUST expose `POST /interpret` accepting `{ "message": string }`.
 It MUST return a hard-coded `DELAY` intent regardless of the message content.
@@ -102,6 +195,31 @@ changing the endpoint contract.
 - GIVEN `language` is running
 - WHEN `POST /interpret` receives a body without the `message` field
 - THEN the response status is 422 (Unprocessable Entity)
+
+---
+
+### Requirement: Language port contract unchanged at the HTTP boundary (Phase 2+)
+
+The `POST /messages` request body shape MUST remain `{ "message": string }` (unchanged from Phase 0).
+No new fields are added to the request in Phase 2+.
+
+`scheduling` MUST still call `language POST /interpret` with `{ "message": string }`
+and read `{ intent: { kind, params }, confidence }` from the response.
+This envelope is stable through Phase 3 (ADR-0005).
+
+#### Scenario: request body is still { message } only
+
+- GIVEN `POST /messages` is called with `{ "message": "some text" }`
+- THEN the request is accepted without error
+- AND no additional fields are required in the body
+
+#### Scenario: language service errors still return structured error
+
+- GIVEN `language` is NOT running or unreachable
+- WHEN `POST /messages` receives a valid request
+- THEN `scheduling` responds with HTTP 503
+- AND the response body is `{ "error": "language_unavailable" }`
+  (unchanged from Phase 0 base spec)
 
 ---
 
@@ -155,24 +273,36 @@ environment. This is required because web (Vite, port 5173) and scheduling
 
 ## Test Runner Notes
 
-Only `scheduling` has a test runner (Jest, unit + e2e) as of Phase 0. Requirements
+Only `scheduling` has a test runner (Jest, unit + e2e) as of Phase 0–2. Requirements
 targeting `scheduling` MUST be covered by automated tests. Requirements targeting
 `language` and `web` are verified manually or via integration smoke tests until
 those apps gain test infrastructure.
 
-| Requirement | Target app | Automatable now |
-|---|---|---|
-| Web-to-Scheduling REST submission | `web` | Manual / E2E only |
-| scheduling interprets and proxies | `scheduling` | Yes — Jest unit + e2e |
-| language returns hard-coded DELAY | `language` | Manual / curl smoke test |
-| scheduling handles language unavailability | `scheduling` | Yes — Jest unit |
-| CORS permits web origin | `scheduling` | Yes — Jest e2e |
+| Requirement | Target app | Automatable now | Phase |
+|---|---|---|---|
+| Web-to-Scheduling REST submission | `web` | Manual / E2E only | 0+ |
+| scheduling orchestrates message → Plan | `scheduling` | Yes — Jest unit + e2e | 2+ |
+| Agenda-not-found → HTTP 422 | `scheduling` | Yes — Jest e2e | 2+ |
+| PlanResponseDto time fields are HH:MM | `scheduling` | Yes — Jest unit | 2+ |
+| Confidence passes through unchanged | `scheduling` | Yes — Jest unit | 2+ |
+| language returns hard-coded DELAY | `language` | Manual / curl smoke test | 0+ |
+| scheduling handles language unavailability | `scheduling` | Yes — Jest unit | 0+ |
+| CORS permits web origin | `scheduling` | Yes — Jest e2e | 0+ |
+| Request body stays { message } only | `scheduling` | Yes — Jest e2e | 2+ |
 
 ---
 
 ## Deferred
 
-**`persistence-connectivity`** — Postgres connection probe (`SELECT 1`) from
-`scheduling` is deferred to Phase 2. Reason: Postgres lives only in docker-compose
-and is not in the `make dev` path. Phase 0 MUST be fully runnable via `make dev`
-with no Docker and no database.
+**`persistence-write`** — Writing to `appointments` (apply plan) and `change_history`
+(audit) are deferred to Phase 4. Phase 2 is read-only. Persistence connectivity
+(Postgres, Neon, Prisma) is stable as of Phase 2.
+
+**`plan-confirmation-and-apply`** — The doctor confirming the proposed plan and
+triggering apply(plan) is deferred to Phase 4. Phase 2 returns a proposed plan only.
+
+**`frontend-rendering`** — The web UI update to render `PlanResponseDto` shape is
+deferred to Phase 4. Phase 2 may visibly break the frontend until the UI adapts.
+
+**`real-nlu`** — Real Language NLU replaces the hardcoded DELAY stub in Phase 3.
+The contract envelope and `scheduling` integration are stable from Phase 0–3.
