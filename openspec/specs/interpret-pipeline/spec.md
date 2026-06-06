@@ -9,21 +9,21 @@ hard-coded `DELAY` intent, and returns it to the web UI for rendering.
 
 No domain logic, no real NLU, no database. Contracts only.
 
-## Agreed contract (stable from Phase 0 through Phase 3)
+## Agreed contract (stable from Phase 0 through Phase 3+)
 
 The intent is **data** in the ADR-0005 `{ kind, params }` shape. `language` MUST
 return, and `scheduling` MUST forward to its domain layer, this body:
 
 ```json
 {
-  "intent": { "kind": "DELAY", "params": { "minutes": 15 } },
-  "confidence": 1.0
+  "intent": { "kind": "DELAY", "params": { "minutes": <int> } },
+  "confidence": <float 0..1>
 }
 ```
 
 - `intent.kind` is UPPERCASE (ADR-0005); `params` is an open, intent-specific object.
-- `confidence` is present from Phase 0 (a hard-coded `1.0` for the stub); Phase 3
-  replaces the stub body with a real LLM result without changing this envelope.
+- `intent.params.minutes` is a positive integer derived from the doctor's message (Phase 3+); NOT hard-coded.
+- `confidence` is a self-reported float from the LLM (Phase 3+); NOT hard-coded to `1.0`. Phase 3 returns it unchanged; enforcement is Phase 5.
 - The `intent` (`{ kind, params }`) and `confidence` envelope MUST NOT be renamed
   or restructured — Phase 1 planners key off `intent.kind` and read `intent.params`.
 
@@ -176,25 +176,49 @@ or an empty `PlanResponseDto`.
 
 ---
 
-### Requirement: Language returns hard-coded DELAY intent (stable, Phase 0+)
+### Requirement: Language interprets the message via an LLM (Phase 3+)
 
 `language` MUST expose `POST /interpret` accepting `{ "message": string }`.
-It MUST return a hard-coded `DELAY` intent regardless of the message content.
-The response shape MUST be stable so Phase 3 can replace the stub body without
-changing the endpoint contract.
 
-#### Scenario: /interpret returns the hard-coded DELAY contract for any input
+The **HTTP envelope is unchanged** and MUST remain stable through all future phases:
 
-- GIVEN `language` is running
-- WHEN `POST /interpret` receives `{ "message": "<any string>" }`
+```json
+{
+  "intent": { "kind": "DELAY", "params": { "minutes": <int> } },
+  "confidence": <float 0..1>
+}
+```
+
+- `intent.kind` MUST be UPPERCASE (ADR-0005). The only supported kind in Phase 3
+  is `"DELAY"`. Any other kind returned by the LLM MUST be rejected — see the
+  `language-nlu` spec for the full validation contract.
+- `intent.params.minutes` MUST be a positive integer derived from the LLM result,
+  not a hard-coded constant.
+- `confidence` MUST be the self-reported float returned by the LLM, passed through
+  unchanged. It MUST NOT be hard-coded to `1.0` after Phase 3.
+- The service MUST never return HTTP 200 with a fabricated or coerced intent. If
+  the LLM result is off-schema or the LLM is unavailable, the service MUST return
+  an error response — see `language-nlu` spec §Error and HTTP semantics.
+
+The `scheduling` adapter MUST NOT change. It already maps any non-2xx response from
+`language` to `503 language_unavailable`. That behavior is unchanged.
+
+#### Scenario: /interpret returns an LLM-derived DELAY intent for a concrete message
+
+- GIVEN `language` is running and the LLM is reachable
+- WHEN `POST /interpret` receives `{ "message": "llego 40 minutos tarde" }`
 - THEN the response status is 200
-- AND the response body is exactly `{ "intent": { "kind": "DELAY", "params": { "minutes": 15 } }, "confidence": 1.0 }`
+- AND the response body matches `{ "intent": { "kind": "DELAY", "params": { "minutes": 40 } }, "confidence": <float> }`
+- AND `confidence` is a float in [0, 1], not hard-coded to 1.0
 
-#### Scenario: /interpret rejects a missing message field
+#### Scenario: /interpret rejects a missing message field (unchanged)
 
 - GIVEN `language` is running
 - WHEN `POST /interpret` receives a body without the `message` field
 - THEN the response status is 422 (Unprocessable Entity)
+
+(This scenario is unchanged from the canonical spec; it is repeated here for
+completeness of the Phase 3 update.)
 
 ---
 
@@ -240,7 +264,7 @@ This requirement proves the synchronous coupling failure surface honestly
 
 #### Scenario: language times out — scheduling returns structured error
 
-- GIVEN `language` is reachable but does not respond within the configured timeout (5s)
+- GIVEN `language` is reachable but does not respond within the configured timeout (10s AbortController on scheduling side, 8s request timeout on language side)
 - WHEN `scheduling POST /messages` receives a valid request
 - THEN `scheduling` responds with HTTP 503
 - AND the response body is `{ "error": "language_unavailable" }`
@@ -285,7 +309,10 @@ those apps gain test infrastructure.
 | Agenda-not-found → HTTP 422 | `scheduling` | Yes — Jest e2e | 2+ |
 | PlanResponseDto time fields are HH:MM | `scheduling` | Yes — Jest unit | 2+ |
 | Confidence passes through unchanged | `scheduling` | Yes — Jest unit | 2+ |
-| language returns hard-coded DELAY | `language` | Manual / curl smoke test | 0+ |
+| Language interprets message via LLM (fake) | `language` | Yes — pytest (FakeInterpreter) | 3+ |
+| Language rejects off-schema LLM output | `language` | Yes — pytest (FakeInterpreter) | 3+ |
+| Language returns 503 when LLM unavailable | `language` | Yes — pytest (FakeInterpreter) | 3+ |
+| Language live round-trip (real LLM) | `language` | Yes — pytest (self-skips without key) | 3+ |
 | scheduling handles language unavailability | `scheduling` | Yes — Jest unit | 0+ |
 | CORS permits web origin | `scheduling` | Yes — Jest e2e | 0+ |
 | Request body stays { message } only | `scheduling` | Yes — Jest e2e | 2+ |
@@ -303,6 +330,3 @@ triggering apply(plan) is deferred to Phase 4. Phase 2 returns a proposed plan o
 
 **`frontend-rendering`** — The web UI update to render `PlanResponseDto` shape is
 deferred to Phase 4. Phase 2 may visibly break the frontend until the UI adapts.
-
-**`real-nlu`** — Real Language NLU replaces the hardcoded DELAY stub in Phase 3.
-The contract envelope and `scheduling` integration are stable from Phase 0–3.
