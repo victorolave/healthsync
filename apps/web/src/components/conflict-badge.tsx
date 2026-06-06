@@ -21,10 +21,9 @@ export function ConflictBadge({ conflict, className }: ConflictBadgeProps) {
 
   return (
     <Badge
-      role="status"
       aria-label={`Conflicto: ${label} — ${conflict.proposedSlot.start} a ${conflict.proposedSlot.end}`}
       className={cn(
-        'bg-warning/15 text-warning border-warning/40 hover:bg-warning/25',
+        'bg-warning/15 text-warning-text border-warning/40 hover:bg-warning/25',
         className,
       )}
     >
