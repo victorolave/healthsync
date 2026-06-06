@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { MessagesService } from './application/messages.service';
 import { MessageDto } from './dto/message.dto';
-import { IntentResponseDto } from './dto/intent-response.dto';
+import type { PlanResponseDto } from './dto/plan-response.dto';
 
 @Controller('messages')
 export class MessagesController {
@@ -9,7 +9,7 @@ export class MessagesController {
 
   @Post()
   @HttpCode(200)
-  create(@Body() dto: MessageDto): Promise<IntentResponseDto> {
+  create(@Body() dto: MessageDto): Promise<PlanResponseDto> {
     return this.messagesService.process(dto);
   }
 }

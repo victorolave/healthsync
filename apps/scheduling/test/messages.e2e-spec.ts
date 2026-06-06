@@ -7,17 +7,43 @@ import {
   LANGUAGE_PORT,
   LanguagePort,
 } from '../src/messages/application/language.port';
+import { AGENDA_REPOSITORY } from '../src/messages/application/agenda.repository';
+import { InMemoryAgendaRepository } from '../src/messages/infrastructure/in-memory-agenda.repository';
+import {
+  agenda,
+  workingHours,
+  localTime,
+  appointment,
+  timeSlot,
+} from '../src/domain';
+import { DOCTOR_ID, today } from '../src/messages/application/scheduling.constants';
+import { PrismaService } from '../src/messages/infrastructure/prisma/prisma.service';
 
 describe('POST /messages (e2e)', () => {
   let app: INestApplication;
   let language: jest.Mocked<LanguagePort>;
+  let agendaRepo: InMemoryAgendaRepository;
 
   const mockIntentResponse = {
     intent: { kind: 'DELAY', params: { minutes: 15 } },
     confidence: 1.0,
   };
 
+  const TODAY = today();
+
+  const makeAgenda = () => {
+    const wh = workingHours(localTime(8, 0), localTime(17, 0));
+    const appt = appointment(
+      'appt-1',
+      'patient-1',
+      timeSlot(localTime(9, 0), localTime(9, 30)),
+    );
+    return agenda([appt], wh);
+  };
+
   beforeEach(async () => {
+    agendaRepo = new InMemoryAgendaRepository();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -25,6 +51,10 @@ describe('POST /messages (e2e)', () => {
       .useValue({
         interprets: jest.fn().mockResolvedValue(mockIntentResponse),
       })
+      .overrideProvider(AGENDA_REPOSITORY)
+      .useValue(agendaRepo)
+      .overrideProvider(PrismaService)
+      .useValue({})
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -38,13 +68,29 @@ describe('POST /messages (e2e)', () => {
     await app.close();
   });
 
-  it('POST /messages → 200 with DELAY intent body', () => {
+  it('POST /messages → 200 with PlanResponseDto (status: proposed)', () => {
+    agendaRepo.seed(DOCTOR_ID, TODAY, makeAgenda());
+
     return request(app.getHttpServer())
       .post('/messages')
-      .send({ message: 'push my 3pm back 30 min' })
+      .send({ message: 'push my 3pm back 15 min' })
       .expect(200)
       .expect((res) => {
-        expect(res.body).toEqual(mockIntentResponse);
+        expect(res.body.status).toBe('proposed');
+        expect(typeof res.body.confidence).toBe('number');
+        expect(Array.isArray(res.body.operations)).toBe(true);
+        expect(Array.isArray(res.body.conflicts)).toBe(true);
+      });
+  });
+
+  it('POST /messages → 422 when agenda not found (no seed)', () => {
+    // No seed in agendaRepo → findAgendaForDate returns null → 422
+    return request(app.getHttpServer())
+      .post('/messages')
+      .send({ message: 'push my 3pm back 15 min' })
+      .expect(422)
+      .expect((res) => {
+        expect(res.body).toMatchObject({ error: 'agenda_not_found' });
       });
   });
 
