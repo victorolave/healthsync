@@ -62,19 +62,14 @@ describe('ProposedPlanView', () => {
 
     render(<ProposedPlanView plan={plan} />)
 
-    const badge = screen.getByRole('status')
+    const badge = screen.getByLabelText(/Conflicto:/i)
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('Se pasa del horario de cierre')
     expect(badge).toHaveTextContent('18:30')
   })
 
   it('shows confidence percentage', () => {
-    const plan = makePlan({ confidence: 0.87 })
-
-    render(<ProposedPlanView plan={plan} />)
-
-    // Confidence is shown as percentage — but empty plan shows "sin cambios"
-    // Add an operation so the view renders with confidence
+    // Empty plan shows "sin cambios" — need at least one operation to render confidence
     const planWithOp = makePlan({
       confidence: 0.87,
       operations: [
@@ -87,8 +82,7 @@ describe('ProposedPlanView', () => {
         },
       ],
     })
-    const { unmount } = render(<ProposedPlanView plan={plan} />)
-    unmount()
+
     render(<ProposedPlanView plan={planWithOp} />)
     expect(screen.getByText('Confianza: 87%')).toBeInTheDocument()
   })

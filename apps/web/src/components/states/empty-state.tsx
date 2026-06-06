@@ -15,7 +15,7 @@ export function EmptyState() {
       </div>
       <div className="space-y-1">
         <p className="text-sm font-medium text-foreground">
-          Contale qué pasó
+          Contame qué pasó
         </p>
         <p className="text-sm text-muted-foreground max-w-xs">
           Escribe un mensaje describiendo el cambio de agenda y el asistente

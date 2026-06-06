@@ -41,7 +41,7 @@ export function ChatInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Contale qué pasó — reorganiza el resto"
+          placeholder="Contame qué pasó — reorganiza el resto"
           disabled={loading || disabled}
           aria-label="Mensaje para el asistente de agenda"
           className="flex-1"

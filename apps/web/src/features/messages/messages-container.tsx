@@ -17,20 +17,18 @@ type ViewState =
  * Single stateful container — owns fetch state and orchestrates the view.
  * All child components are pure presentational.
  *
- * NOTE: lastMessage is kept in state for PR4 (FE-loop will use it to wire
- * the Confirm button without restructuring this container).
+ * NOTE: lastMessage tracking is deferred to PR4 (Confirm flow). It will be
+ * re-added when wiring POST /messages/confirm.
  */
 export function MessagesContainer() {
   const [input, setInput] = useState('')
   const [view, setView] = useState<ViewState>({ kind: 'empty' })
-  const [lastMessage, setLastMessage] = useState<string>('')
 
   const handleSubmit = async () => {
     const trimmed = input.trim()
     if (!trimmed) return
 
     setView({ kind: 'loading' })
-    setLastMessage(trimmed)
     setInput('')
 
     const result = await postMessage(trimmed)
@@ -65,9 +63,6 @@ export function MessagesContainer() {
       {view.kind === 'error' && (
         <ErrorState message={view.message} onRetry={handleRetry} />
       )}
-
-      {/* lastMessage reserved for PR4 (Confirm flow) — intentionally used here */}
-      {lastMessage && null}
     </div>
   )
 }

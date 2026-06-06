@@ -44,7 +44,7 @@ export function PlanOperationCard({
           </span>
           <ArrowLeftRight
             className="size-4 text-primary"
-            aria-label="se mueve a"
+            aria-hidden="true"
           />
           <span className="tabular-nums text-sm font-semibold text-foreground">
             {operation.to.start}
