@@ -13,6 +13,12 @@ import { toAgenda } from './agenda.mapper';
 export class PrismaAgendaRepository implements AgendaRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async saveAgenda(_doctorId: string, _date: Date, _agenda: Agenda): Promise<void> {
+    throw new Error(
+      'saveAgenda not implemented (Phase 4 / use in-memory demo)',
+    );
+  }
+
   async findAgendaForDate(doctorId: string, date: Date): Promise<Agenda | null> {
     const wh = await this.prisma.workingHours.findUnique({
       where: { doctorId_day: { doctorId, day: date } },

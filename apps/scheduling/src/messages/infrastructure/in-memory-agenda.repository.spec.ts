@@ -40,4 +40,20 @@ describe('InMemoryAgendaRepository', () => {
     const repo = new InMemoryAgendaRepository();
     expect(typeof repo.findAgendaForDate).toBe('function');
   });
+
+  it('satisfies the AgendaRepository port contract (saveAgenda present)', () => {
+    const repo = new InMemoryAgendaRepository();
+    expect(typeof repo.saveAgenda).toBe('function');
+  });
+
+  it('persists an agenda via saveAgenda and retrieves it with findAgendaForDate', async () => {
+    const repo = new InMemoryAgendaRepository();
+    const wh = workingHours(localTime(8, 0), localTime(17, 0));
+    const ag = agenda([], wh);
+
+    await repo.saveAgenda(DOCTOR_ID, TODAY, ag);
+    const result = await repo.findAgendaForDate(DOCTOR_ID, TODAY);
+
+    expect(result).toBe(ag);
+  });
 });
