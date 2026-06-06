@@ -482,8 +482,8 @@ S3-4 (parallel) ──────────────────→ S3-5 �
 
 ## Task Summary
 
-| ID | File / Action | Type | DB? | Slice |
-|----|--------------|------|-----|-------|
+| ID | File / Action | Type | DB? | Slice | Status |
+|----|--------------|------|-----|-------|--------|
 | S1-1 | `package.json` — deps + scripts | EDIT | No | 1 | [x] |
 | S1-2 | `prisma/schema.prisma` — 3 models | NEW | No | 1 | [x] |
 | S1-3 | `.env.example` + `.gitignore` | NEW/EDIT | No | 1 | [x] |
