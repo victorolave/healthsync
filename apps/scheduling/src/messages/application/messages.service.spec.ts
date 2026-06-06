@@ -104,9 +104,8 @@ describe('MessagesService', () => {
     const json = JSON.stringify(result);
     const parsed = JSON.parse(json);
 
-    if (parsed.operations.length > 0) {
-      expect(typeof parsed.operations[0].from.start).toBe('string');
-      expect(parsed.operations[0].from.start).toMatch(/^\d{2}:\d{2}$/);
-    }
+    expect(parsed.operations.length).toBeGreaterThan(0);
+    expect(typeof parsed.operations[0].from.start).toBe('string');
+    expect(parsed.operations[0].from.start).toMatch(/^\d{2}:\d{2}$/);
   });
 });
