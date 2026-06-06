@@ -91,7 +91,7 @@ both adapter (raises) and main.py (catches) import it.
 
 **File:** `apps/language/app/config.py` (NEW)
 **What it creates:**
-- `Settings(BaseSettings)` with `openrouter_api_key: str = ""`, `llm_model: str = "anthropic/claude-haiku-4.5"`, `request_timeout: float = 4.0`; `SettingsConfigDict(env_file=".env", extra="ignore")`.
+- `Settings(BaseSettings)` with `openrouter_api_key: str = ""`, `llm_model: str = "anthropic/claude-haiku-4.5"`, `request_timeout: float = 8.0`; `SettingsConfigDict(env_file=".env", extra="ignore")`. (Value raised from 4.0 to 8.0 post-live-test; scheduling AbortController correspondingly raised to 10s.)
 - `@lru_cache get_settings() -> Settings`.
 **Driving spec:** Requirement: Configuration (LLM_MODEL defaults, override via env, fail-fast on missing key).
 **Driving test:** Covered by test_interpret_route.py (T9) — the default is exercised when no env var is set.
@@ -150,7 +150,7 @@ both adapter (raises) and main.py (catches) import it.
   3. Check `tool_calls` not empty; JSON-parse `function.arguments`; `ToolOutput.model_validate(raw)` — any failure → `InterpretationError`.
   4. Return `tool_output_to_response(validated)`.
 **Isolation constraint:** Only this file imports `openai`. Route, port, fake, and ALL tests must never import it.
-**Driving spec:** Requirement: LLM-backed interpretation; Requirement: Output validation; Requirement: Error and HTTP semantics; timeout 4.0s.
+**Driving spec:** Requirement: LLM-backed interpretation; Requirement: Output validation; Requirement: Error and HTTP semantics; timeout 8.0s (raised from 4.0s).
 **Driving test:** `tests/test_openrouter_live.py` (T10) is the only test that exercises this file directly. Route tests (T9) bypass it via FakeInterpreter.
 **OPENROUTER_API_KEY needed:** No for unit tests (bypassed by fake). YES for the live test (T10).
 **Sequential dependency:** T4 (Settings), T5 (port.py + errors.py), T6 (prompt.py + tool schema), T2 (ToolOutput + mapper).

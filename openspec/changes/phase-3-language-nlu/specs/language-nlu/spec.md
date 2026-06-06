@@ -230,8 +230,9 @@ its value is observability and future refinement.
 
 #### Scenario: LLM timeout → 503 llm_unavailable
 
-- GIVEN the LLM call exceeds the language-side timeout (< 5 s, configured to fit
-  within scheduling's 5 s AbortController)
+- GIVEN the LLM call exceeds the language-side timeout (8 s, configured to fit
+  within scheduling's 10 s AbortController; raised from 4 s after observing a
+  ConnectTimeout at exactly 4.0 s on cold-start)
 - WHEN `POST /interpret` is called with a valid message
 - THEN the response status is 503
 - AND the response body is `{ "error": "llm_unavailable" }`
@@ -485,7 +486,7 @@ apps/language/
 | Clarification path (ask for missing duration) | Phase 5 |
 | Confidence threshold enforcement (reject < 0.7) | Phase 5 |
 | logprob-based confidence (LLM-computed vs self-reported) | Phase 5 |
-| Raising the scheduling-side 5 s AbortController timeout | Phase 5 (flagged) |
+| Raising the scheduling-side AbortController timeout | Done — raised to 10 s (language 8 s) in Phase 3 post-live-test fix |
 | Plan confirmation, notifications, persistence | Phase 4 |
 
 ---

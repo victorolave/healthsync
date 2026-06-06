@@ -27,10 +27,10 @@ class OpenRouterInterpreter:
             # service can still start and serve /health without a key.
             self._client: AsyncOpenAI | None = None
         else:
-            # max_retries=0: the SDK default is 2, and the 4s timeout is
-            # per-attempt — 3 attempts + backoff ≈ 13s total, which violates
-            # ADR-0007's "strictly below 5s" budget. A single attempt makes
-            # the 4s timeout a hard total bound.
+            # max_retries=0: the SDK default is 2, and the 8s timeout is
+            # per-attempt — 3 attempts + backoff would exceed 24s, violating
+            # ADR-0007's ordering invariant (language 8s < scheduling 10s).
+            # A single attempt makes the 8s timeout a hard total bound.
             self._client = AsyncOpenAI(
                 api_key=settings.openrouter_api_key,
                 base_url="https://openrouter.ai/api/v1",

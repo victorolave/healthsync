@@ -19,8 +19,10 @@ mapping — so the tasks phase can break it into mechanical steps with zero ambi
 3. **Honesty contract** — language NEVER returns 200 with a fabricated intent. Validation/contract
    failure → 502 `interpretation_failed`; provider down/timeout/missing key → 503 `llm_unavailable`;
    missing request field → 422 (FastAPI default).
-4. **Timeout** — adapter sets the OpenAI client timeout to **4.0s**, strictly below scheduling's 5s
+4. **Timeout** — adapter sets the OpenAI client timeout to **8.0s**, strictly below scheduling's 10s
    `AbortController`, so a slow LLM yields a clean language-side 503 instead of a scheduling abort.
+   Raised from 4.0s after a live test observed ConnectTimeout→503 at exactly 4.0s on cold-start
+   (warm round-trip 2.49s); ordering invariant: scheduling (10s) > language (8s).
 5. **Test infra (Standard Mode)** — bootstrap pytest + pytest-asyncio + httpx; fake-based unit/route
    tests for CI; one live test that self-skips when `OPENROUTER_API_KEY` is absent.
 6. **ADR-0014** — record the OpenRouter + Haiku-4.5-via-`openai`-SDK decision and the two-hop privacy
@@ -64,8 +66,8 @@ LLM "stays inside the language context."
 
 - IN language: prompt construction, tool-schema definition, raw-args validation, mapping to the HTTP
   envelope, confidence pass-through, error classification, timeout.
-- OUT (unchanged): the HTTP envelope shape, scheduling's planners, the 5s scheduling timeout (flagged
-  for a future phase, NOT touched here), CANCEL_BLOCK / clarification / threshold enforcement (Phase 5).
+- OUT (unchanged): the HTTP envelope shape, scheduling's planners, CANCEL_BLOCK / clarification /
+  threshold enforcement (Phase 5). Note: scheduling timeout raised to 10s in this change (above language's 8s).
 
 ---
 
@@ -386,7 +388,7 @@ class OpenRouterInterpreter:           # structurally satisfies LLMInterpreter
             self._client = AsyncOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=settings.openrouter_api_key,
-                timeout=settings.request_timeout,      # 4.0s — see §6
+                timeout=settings.request_timeout,      # 8.0s — see §6
                 default_headers={
                     "HTTP-Referer": "https://github.com/victorolave/healthsync",
                     "X-Title": "HealthSync",
@@ -429,18 +431,17 @@ class OpenRouterInterpreter:           # structurally satisfies LLMInterpreter
 
 ## 6. Timeout
 
-- **Value: `request_timeout = 4.0` seconds**, defined in `Settings` (config.py) and passed to
+- **Value: `request_timeout = 8.0` seconds**, defined in `Settings` (config.py) and passed to
   `AsyncOpenAI(timeout=...)` in the adapter constructor.
 - **Where it matters:** the call chain is `scheduling → language → OpenRouter → Anthropic`.
-  `HttpLanguageAdapter` has a hard **5000ms** `AbortController` (verified in
-  `http-language.adapter.ts` line 20). Setting the language-side timeout to **4.0s** (strictly below
-  5s) guarantees that a slow LLM produces a clean language-side **503 `llm_unavailable`** rather than
+  `HttpLanguageAdapter` has a hard **10000ms** `AbortController` (verified in
+  `http-language.adapter.ts` line 20). Setting the language-side timeout to **8.0s** (strictly below
+  10s) guarantees that a slow LLM produces a clean language-side **503 `llm_unavailable`** rather than
   scheduling aborting the connection mid-flight (which scheduling reports as
-  `503 language_unavailable` with no body from language). 4.0s leaves ~1s of headroom for network +
-  scheduling-side overhead inside the 5s budget.
-- **FLAGGED, NOT FIXED (proposal #5):** if real OpenRouter p99 latency for Haiku 4.5 exceeds ~4s, the
-  scheduling 5s `AbortController` may need raising in a later phase. Phase 3 does NOT touch scheduling.
-  Risk recorded below.
+  `503 language_unavailable` with no body from language). 8.0s leaves ~2s of headroom for network +
+  scheduling-side overhead inside the 10s budget.
+- **Raised from 4.0s:** a live OpenRouter test observed ConnectTimeout→503 at exactly 4.0s on
+  cold-start (warm round-trip was 2.49s). Ordering invariant preserved: scheduling (10s) > language (8s).
 
 ---
 
@@ -499,7 +500,7 @@ class Settings(BaseSettings):
 
     openrouter_api_key: str = ""                        # empty → 503 at call time (fail fast)
     llm_model: str = "anthropic/claude-haiku-4.5"       # override via LLM_MODEL
-    request_timeout: float = 4.0                         # seconds; < scheduling 5s AbortController
+    request_timeout: float = 8.0                         # seconds; < scheduling 10s AbortController
 
 
 @lru_cache
@@ -641,9 +642,9 @@ the repo template (`docs/adr/template.md`):
 - **Context:** ADR-0010 chose "LLM with structured output" but explicitly DEFERRED the specific
   provider/model and its data-handling terms to a separate ADR. Phase 3 needs a concrete provider to
   replace the DELAY stub. This ADR fills that gap.
-- **Decision drivers:** model/provider flexibility behind one key; low latency to fit scheduling's 5s
-  timeout; low cost for a teaching project; OpenAI-compatible API to use a mature SDK; reliable
-  structured output (tool calling).
+- **Decision drivers:** model/provider flexibility behind one key; low latency to fit scheduling's 10s
+  timeout (language-side 8s, strictly below); low cost for a teaching project; OpenAI-compatible API
+  to use a mature SDK; reliable structured output (tool calling).
 - **Considered options:** (A) OpenRouter gateway + `openai` SDK, default `anthropic/claude-haiku-4.5`;
   (B) Anthropic direct via `anthropic` SDK; (C) OpenAI direct via `openai` SDK.
 - **Decision outcome:** Chosen **Option A** — OpenRouter (OpenAI-compatible, `base_url`
@@ -674,7 +675,7 @@ the repo template (`docs/adr/template.md`):
 | D3 | Tool/function calling with forced `tool_choice` + FLAT schema | Deterministic schema compliance; flat schema maximizes LLM reliability | `response_format: json_object` (model can still deviate) or prompted JSON (most fragile) |
 | D4 | Two Pydantic layers (`ToolOutput` → `IntentResponse`) with `extra: forbid` | Validate raw LLM args strictly, map to the stable nested envelope; reject off-schema, never coerce | Single model bound to the LLM shape — would couple the HTTP contract to the tool schema |
 | D5 | 502 for bad LLM output, 503 for unavailability, 422 only for request validation | Honest, observable failure surface; never 200 with a fabricated intent | Returning 422 for LLM-output failures (collides with request-validation 422) or a fallback fake intent (dishonest) |
-| D6 | Language-side timeout 4.0s (< scheduling 5s) | Slow LLM yields a clean 503, not a scheduling-side abort with no body | No language timeout — relies on scheduling's `AbortController`, loses the structured error body |
+| D6 | Language-side timeout 8.0s (< scheduling 10s) | Slow LLM yields a clean 503, not a scheduling-side abort with no body | No language timeout — relies on scheduling's `AbortController`, loses the structured error body |
 | D7 | Self-reported `confidence` float, returned unchanged | Aligns with ADR-0010 "the LLM provides a confidence signal"; simple; Phase 3 reports only | Logprobs heuristic (Phase 5 candidate); fixed 1.0 (breaks Phase 5 clarification path) |
 | D8 | Standard Mode tests, live test self-skips on missing key | CI runs fully offline + deterministic via the fake; real path validated on demand | Live calls in CI — nondeterministic, costs money, needs a key in CI |
 | D9 | `errors.py` + `prompt.py` as separate modules | `errors` shared by adapter+route (avoid circular import); `prompt` reviewable as a unit | Inlining both in the adapter — couples prompt text to logic, risks import cycle |
@@ -690,7 +691,7 @@ the repo template (`docs/adr/template.md`):
 - [ ] `ToolOutput` uses `extra: forbid`; mapping produces the nested `{ intent: { kind, params: { minutes } }, confidence }`.
 - [ ] System prompt is Spanish, converts idioms, instructs honest low confidence, includes ≥1 few-shot anchor.
 - [ ] Error mapping: 422 (request) / 502 `interpretation_failed` (bad LLM output) / 503 `llm_unavailable` (provider/timeout/missing key); never 200 with a fake intent.
-- [ ] `request_timeout = 4.0` in Settings, passed to `AsyncOpenAI(timeout=...)`.
+- [ ] `request_timeout = 8.0` in Settings, passed to `AsyncOpenAI(timeout=...)`.
 - [ ] pyproject adds `openai`, `pydantic-settings` (runtime) and `pytest`, `pytest-asyncio`, `httpx` (dev); `asyncio_mode = auto`.
 - [ ] Makefile has `test-language`; `test` aggregates scheduling + language; `install-language` installs `[dev]`.
 - [ ] Stale `apps/language/build/` removed (git-untracked if it was tracked); `.gitignore` left as-is (already covers it); `.env.example` added.

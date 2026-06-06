@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     openrouter_api_key: str = ""
     llm_model: str = "anthropic/claude-haiku-4.5"
-    request_timeout: float = 4.0
+    request_timeout: float = 8.0
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
