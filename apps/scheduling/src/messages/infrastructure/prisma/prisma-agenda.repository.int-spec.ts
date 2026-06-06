@@ -15,7 +15,10 @@ describeIfDb('PrismaAgendaRepository (integration)', () => {
   let prisma: PrismaService;
   let repo: PrismaAgendaRepository;
 
+  // All ids/patientIds/doctorIds MUST be valid UUIDs — @db.Uuid columns in Neon
+  // reject non-UUID strings with "invalid input syntax for type uuid".
   const DOCTOR_ID = '00000000-0000-0000-0000-000000000001';
+  const DOCTOR_ID_2 = '00000000-0000-0000-0000-000000000002';
   const TODAY = new Date('2024-01-15T00:00:00.000Z');
 
   beforeAll(async () => {
@@ -25,8 +28,12 @@ describeIfDb('PrismaAgendaRepository (integration)', () => {
   });
 
   afterAll(async () => {
-    await prisma.workingHours.deleteMany({ where: { doctorId: DOCTOR_ID } });
-    await prisma.appointment.deleteMany({ where: { doctorId: DOCTOR_ID } });
+    await prisma.appointment.deleteMany({
+      where: { doctorId: { in: [DOCTOR_ID, DOCTOR_ID_2] } },
+    });
+    await prisma.workingHours.deleteMany({
+      where: { doctorId: { in: [DOCTOR_ID, DOCTOR_ID_2] } },
+    });
     await prisma.onModuleDestroy();
   });
 
@@ -38,7 +45,7 @@ describeIfDb('PrismaAgendaRepository (integration)', () => {
   it('returns an Agenda when working_hours exists (no appointments)', async () => {
     await prisma.workingHours.create({
       data: {
-        id: 'wh-test-id-1',
+        id: '00000000-0000-0000-0000-000000000011',
         doctorId: DOCTOR_ID,
         day: TODAY,
         openTime: new Date('1970-01-01T08:00:00.000Z'),
@@ -58,17 +65,17 @@ describeIfDb('PrismaAgendaRepository (integration)', () => {
     await prisma.appointment.createMany({
       data: [
         {
-          id: 'appt-test-2',
+          id: '00000000-0000-0000-0000-000000000022',
           doctorId: DOCTOR_ID,
-          patientId: 'p-2',
+          patientId: '00000000-0000-0000-0000-000000000032',
           day: TODAY,
           startTime: new Date('1970-01-01T11:00:00.000Z'),
           endTime: new Date('1970-01-01T11:30:00.000Z'),
         },
         {
-          id: 'appt-test-1',
+          id: '00000000-0000-0000-0000-000000000021',
           doctorId: DOCTOR_ID,
-          patientId: 'p-1',
+          patientId: '00000000-0000-0000-0000-000000000031',
           day: TODAY,
           startTime: new Date('1970-01-01T09:00:00.000Z'),
           endTime: new Date('1970-01-01T09:30:00.000Z'),
@@ -88,14 +95,44 @@ describeIfDb('PrismaAgendaRepository (integration)', () => {
     await expect(
       prisma.appointment.create({
         data: {
-          id: 'appt-overlap',
+          id: '00000000-0000-0000-0000-000000000041',
           doctorId: DOCTOR_ID,
-          patientId: 'p-3',
+          patientId: '00000000-0000-0000-0000-000000000033',
           day: TODAY,
           startTime: new Date('1970-01-01T09:15:00.000Z'),
           endTime: new Date('1970-01-01T09:45:00.000Z'),
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('accepts overlapping appointments for DIFFERENT doctors (EXCLUDE constraint is per doctor_id)', async () => {
+    // The EXCLUDE USING gist constraint is scoped by `doctor_id WITH =`,
+    // so an overlapping slot for a different doctor MUST be accepted — cross-doctor
+    // overlap is not a scheduling conflict.
+    await prisma.workingHours.create({
+      data: {
+        id: '00000000-0000-0000-0000-000000000012',
+        doctorId: DOCTOR_ID_2,
+        day: TODAY,
+        openTime: new Date('1970-01-01T08:00:00.000Z'),
+        closeTime: new Date('1970-01-01T17:00:00.000Z'),
+      },
+    });
+
+    // 09:00–09:30 for DOCTOR_ID_2 overlaps the same slot already held by DOCTOR_ID.
+    // This must succeed because the constraint only prevents same-doctor overlap.
+    await expect(
+      prisma.appointment.create({
+        data: {
+          id: '00000000-0000-0000-0000-000000000051',
+          doctorId: DOCTOR_ID_2,
+          patientId: '00000000-0000-0000-0000-000000000034',
+          day: TODAY,
+          startTime: new Date('1970-01-01T09:00:00.000Z'),
+          endTime: new Date('1970-01-01T09:30:00.000Z'),
+        },
+      }),
+    ).resolves.toBeDefined();
   });
 });
