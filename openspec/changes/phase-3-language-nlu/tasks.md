@@ -38,7 +38,7 @@ Detailed ordering and parallelism noted per task below.
 
 ## Work Unit 1 — Bootstrap (pyproject.toml + test infra)
 
-### T1 — Edit `pyproject.toml`: add runtime + dev deps and pytest config
+### [x] T1 — Edit `pyproject.toml`: add runtime + dev deps and pytest config
 
 **File:** `apps/language/pyproject.toml`
 **What it does:** Add `openai>=1.0` and `pydantic-settings>=2.0` to `dependencies`; add
@@ -57,7 +57,7 @@ add `[tool.pytest.ini_options] asyncio_mode = "auto"`, `testpaths = ["tests"]`.
 These tasks form the offline-testable foundation. T2–T5 must precede T6 (adapter) and T7 (route
 rewrite) because both depend on the types they define.
 
-### T2 — Create `app/schemas.py`
+### [x] T2 — Create `app/schemas.py`
 
 **File:** `apps/language/app/schemas.py` (NEW — replaces the inline models in main.py)
 **What it creates:**
@@ -73,7 +73,7 @@ rewrite) because both depend on the types they define.
 **Sequential dependency:** T1 (pydantic-settings must be installable; pydantic already present).
 **Commit message:** (bundled with T3–T5 into one work-unit commit — see Work Unit 2 note)
 
-### T3 — Create `app/errors.py`
+### [x] T3 — Create `app/errors.py`
 
 **File:** `apps/language/app/errors.py` (NEW)
 **What it creates:**
@@ -87,7 +87,7 @@ both adapter (raises) and main.py (catches) import it.
 **Sequential dependency:** None (pure Python, no imports from other new files).
 **Commit message:** (bundled with T2, T4, T5)
 
-### T4 — Create `app/config.py`
+### [x] T4 — Create `app/config.py`
 
 **File:** `apps/language/app/config.py` (NEW)
 **What it creates:**
@@ -99,7 +99,7 @@ both adapter (raises) and main.py (catches) import it.
 **Sequential dependency:** T1 (pydantic-settings runtime dep).
 **Commit message:** (bundled with T2, T3, T5)
 
-### T5 — Create `app/interpreter/port.py` and `app/interpreter/fake.py` + package init
+### [x] T5 — Create `app/interpreter/port.py` and `app/interpreter/fake.py` + package init
 
 **Files:**
 - `apps/language/app/interpreter/__init__.py` (NEW, empty)
@@ -117,7 +117,7 @@ both adapter (raises) and main.py (catches) import it.
 
 ## Work Unit 3 — Prompt module
 
-### T6 — Create `app/interpreter/prompt.py`
+### [x] T6 — Create `app/interpreter/prompt.py`
 
 **File:** `apps/language/app/interpreter/prompt.py` (NEW)
 **What it creates:**
@@ -138,7 +138,7 @@ both adapter (raises) and main.py (catches) import it.
 
 ## Work Unit 4 — Adapter (the only openai-importing file)
 
-### T7 — Create `app/interpreter/openrouter.py`
+### [x] T7 — Create `app/interpreter/openrouter.py`
 
 **File:** `apps/language/app/interpreter/openrouter.py` (NEW)
 **What it creates:** `OpenRouterInterpreter` adapter — the ONLY file in the codebase that imports
@@ -160,7 +160,7 @@ both adapter (raises) and main.py (catches) import it.
 
 ## Work Unit 5 — Route rewrite
 
-### T8 — Rewrite `app/main.py`
+### [x] T8 — Rewrite `app/main.py`
 
 **File:** `apps/language/app/main.py` (REWRITE — replaces the 27-line stub)
 **What it does:**
@@ -179,7 +179,7 @@ both adapter (raises) and main.py (catches) import it.
 
 ## Work Unit 6 — Test files
 
-### T9 — Create `tests/` directory, `conftest.py`, `test_schemas.py`, `test_interpret_route.py`
+### [x] T9 — Create `tests/` directory, `conftest.py`, `test_schemas.py`, `test_interpret_route.py`
 
 **Files:**
 - `apps/language/tests/__init__.py` (NEW, empty)
@@ -211,7 +211,7 @@ both adapter (raises) and main.py (catches) import it.
 **Commit message:** `feat(language): wire interpret route + test suite (offline, fake-based)`
 *(Bundles T8 + T9 — route and its tests ship together as one verifiable work unit.)*
 
-### T10 — Create `tests/test_openrouter_live.py`
+### [x] T10 — Create `tests/test_openrouter_live.py`
 
 **File:** `apps/language/tests/test_openrouter_live.py` (NEW)
 **What it creates:**
@@ -229,7 +229,7 @@ both adapter (raises) and main.py (catches) import it.
 These are independent of the code paths above; they can proceed in parallel with Work Units 5–6
 once T1 is done.
 
-### T11 — Add `apps/language/.env.example`
+### [x] T11 — Add `apps/language/.env.example`
 
 **File:** `apps/language/.env.example` (NEW)
 **What it creates:**
@@ -244,7 +244,7 @@ LLM_MODEL=anthropic/claude-haiku-4.5
 **Sequential dependency:** T1 (conceptually after the dep bootstrap; can be done any time after T1).
 **Commit message:** (bundled with T12)
 
-### T12 — Clean up stale `apps/language/build/` artifact
+### [x] T12 — Clean up stale `apps/language/build/` artifact
 
 **Action:**
 1. Run `git ls-files apps/language/build/` to check tracking status.
@@ -261,7 +261,7 @@ LLM_MODEL=anthropic/claude-haiku-4.5
 
 ## Work Unit 8 — ADR
 
-### T13 — Create `docs/adr/0014-llm-provider.md`
+### [x] T13 — Create `docs/adr/0014-llm-provider.md`
 
 **File:** `docs/adr/0014-llm-provider.md` (NEW — number 0014 confirmed; current ADRs are 0001–0013)
 **Use template at:** `docs/adr/template.md`
@@ -283,7 +283,7 @@ LLM_MODEL=anthropic/claude-haiku-4.5
 
 ## Work Unit 9 — Makefile
 
-### T14 — Edit `Makefile`: split `test` and add `test-language`, `install-language [dev]`
+### [x] T14 — Edit `Makefile`: split `test` and add `test-language`, `install-language [dev]`
 
 **File:** `Makefile` (EDIT)
 **Current state:** `test:` runs `cd $(SCHEDULING_DIR) && $(PNPM) test` (scheduling-only).
