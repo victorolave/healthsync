@@ -1,8 +1,9 @@
 {
+  "_comment": "Dedicated e2e gate. 'pnpm test' already picks up e2e-spec files via the shared testRegex in package.json. This config exists as the explicit DB-inclusive CI gate: run with DATABASE_URL set to also exercise DB-dependent paths (e.g. integration specs). pnpm test:e2e is NOT required in offline CI — use pnpm test there.",
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   }
