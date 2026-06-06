@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WorkingHours {
+  id        String   @id @default(uuid()) @db.Uuid
+  doctorId  String   @db.Uuid
+  day       DateTime @db.Date
+  openTime  DateTime @db.Time(0)
+  closeTime DateTime @db.Time(0)
+
+  @@unique([doctorId, day])
+  @@map("working_hours")
+}
+
+model Appointment {
+  id        String   @id @default(uuid()) @db.Uuid
+  doctorId  String   @db.Uuid
+  patientId String   @db.Uuid
+  day       DateTime @db.Date
+  startTime DateTime @db.Time(0)
+  endTime   DateTime @db.Time(0)
+
+  @@index([doctorId, day])
+  @@map("appointments")
+}
+
+model ChangeHistory {
+  id           String   @id @default(uuid()) @db.Uuid
+  doctorId     String   @db.Uuid
+  occurredAt   DateTime @db.Timestamptz
+  rawMessage   String
+  intentKind   String   @db.VarChar(50)
+  intentParams Json     @db.JsonB
+  planSnapshot Json     @db.JsonB
+  applied      Boolean
+
+  @@map("change_history")
+}
