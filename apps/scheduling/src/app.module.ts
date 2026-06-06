@@ -22,6 +22,11 @@ import { buildPlannerRegistry } from './domain';
     PrismaService,
     { provide: LANGUAGE_PORT, useClass: HttpLanguageAdapter },
     { provide: AGENDA_REPOSITORY, useClass: PrismaAgendaRepository },
+    // Phase 4 architecture-in-waiting: the port + fail-loud stub are intentionally
+    // registered here so DI fails loudly if any code attempts an accidental write.
+    // MessagesService does NOT inject or call this repository in Phase 2 (read-only).
+    // A real adapter will replace FailingChangeHistoryRepository when Phase 4 wires
+    // apply-on-confirm and change_history persistence.
     { provide: CHANGE_HISTORY_REPOSITORY, useClass: FailingChangeHistoryRepository },
     {
       provide: PLANNER_REGISTRY,

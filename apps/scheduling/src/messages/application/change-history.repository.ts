@@ -15,7 +15,14 @@ export interface ChangeHistoryEntry {
 
 /**
  * Outbound port for persisting change-history records.
- * Phase 4 provides a real adapter; until then a fail-loud stub is wired (D5).
+ *
+ * Phase 4 architecture-in-waiting: this port and the FailingChangeHistoryRepository
+ * stub are laid down in Phase 2 to keep the hexagonal architecture honest (ADR-0002,
+ * D5). They are intentionally NOT consumed by MessagesService in Phase 2 — this phase
+ * is read-only on persistence (interpret → load Agenda → plan → return DTO).
+ *
+ * Phase 4 will wire apply-on-confirm and replace the stub with a real Prisma adapter.
+ * Until then, any premature call to record() will throw, surfacing the violation loudly.
  */
 export interface ChangeHistoryRepository {
   record(entry: ChangeHistoryEntry): Promise<void>;
