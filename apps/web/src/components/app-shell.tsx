@@ -9,7 +9,7 @@ interface AppShellProps {
 
 /**
  * App shell: sticky top bar with logo swap (light/dark) and dark-mode toggle.
- * Centered content column max-w-2xl.
+ * Content column: max-w-6xl to accommodate the two-panel layout.
  */
 export function AppShell({ children }: AppShellProps) {
   const { isDark, toggle } = useDarkMode()
@@ -18,7 +18,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="min-h-screen bg-background text-foreground">
       {/* Top app bar */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           {/* Logo */}
           <div className="flex items-center gap-2">
             <img
@@ -45,7 +45,7 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-6xl px-4 py-6">
         {children}
       </main>
     </div>

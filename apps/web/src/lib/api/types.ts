@@ -41,12 +41,39 @@ export interface PlanResponseDto {
 }
 
 /* ------------------------------------------------------------------ */
+/* Agenda DTOs — GET /agenda                                           */
+/* ------------------------------------------------------------------ */
+
+export interface AgendaAppointmentDto {
+  id: string
+  patientId: string
+  slot: TimeSlotDto
+}
+
+export interface AgendaDto {
+  date: string
+  workingHours: {
+    open: string
+    close: string
+  }
+  appointments: AgendaAppointmentDto[]
+}
+
+/** Response for POST /messages/confirm */
+export interface ConfirmResponseDto {
+  status: 'applied'
+  operations: OperationDto[]
+  agenda: AgendaDto
+}
+
+/* ------------------------------------------------------------------ */
 /* Discriminated Result<T> — API client return type                   */
 /* ------------------------------------------------------------------ */
 
 export type ApiError =
   | { kind: 'agenda_not_found'; message: string }
   | { kind: 'language_unavailable'; message: string }
+  | { kind: 'service_unavailable'; message: string }
   | { kind: 'network'; message: string }
   | { kind: 'unknown'; message: string }
 
