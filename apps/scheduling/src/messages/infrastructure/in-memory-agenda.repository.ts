@@ -20,4 +20,8 @@ export class InMemoryAgendaRepository implements AgendaRepository {
   async findAgendaForDate(doctorId: string, date: Date): Promise<Agenda | null> {
     return this.store.get(this.key(doctorId, date)) ?? null;
   }
+
+  async saveAgenda(doctorId: string, date: Date, ag: Agenda): Promise<void> {
+    this.store.set(this.key(doctorId, date), ag);
+  }
 }
