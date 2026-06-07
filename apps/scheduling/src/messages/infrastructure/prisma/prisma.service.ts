@@ -7,6 +7,8 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   async onModuleInit(): Promise<void> {
+    // Demo mode: skip the DB connection entirely (agenda served from memory).
+    if (process.env.USE_IN_MEMORY_AGENDA === 'true') return;
     await this.$connect();
   }
 

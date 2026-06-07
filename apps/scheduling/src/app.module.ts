@@ -36,7 +36,10 @@ import { buildPlannerRegistry } from './domain';
     // MessagesService does NOT inject or call this repository in Phase 2 (read-only).
     // A real adapter will replace FailingChangeHistoryRepository when Phase 4 wires
     // apply-on-confirm and change_history persistence.
-    { provide: CHANGE_HISTORY_REPOSITORY, useClass: FailingChangeHistoryRepository },
+    {
+      provide: CHANGE_HISTORY_REPOSITORY,
+      useClass: FailingChangeHistoryRepository,
+    },
     {
       provide: PLANNER_REGISTRY,
       useFactory: () => buildPlannerRegistry(),
