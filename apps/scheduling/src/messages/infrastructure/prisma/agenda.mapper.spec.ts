@@ -1,4 +1,4 @@
-import { toLocalTime, toAgenda } from './agenda.mapper';
+import { toLocalTime, fromLocalTime, toAgenda } from './agenda.mapper';
 import { localTime } from '../../../domain';
 
 // Prisma returns TIME(0) columns as Date objects anchored at 1970-01-01T00:00:00Z.
@@ -26,6 +26,36 @@ describe('toLocalTime', () => {
     const result = toLocalTime(prismaDate);
     // Must equal 08:00 regardless of process.env.TZ
     expect(result.equals(localTime(8, 0))).toBe(true);
+  });
+});
+
+describe('fromLocalTime', () => {
+  it('produces a Date with UTC hours/minutes matching the input', () => {
+    const d = fromLocalTime(localTime(9, 30));
+    expect(d.getUTCHours()).toBe(9);
+    expect(d.getUTCMinutes()).toBe(30);
+  });
+
+  it('anchors the date at 1970-01-01 epoch', () => {
+    const d = fromLocalTime(localTime(8, 0));
+    expect(d.getUTCFullYear()).toBe(1970);
+    expect(d.getUTCMonth()).toBe(0);
+    expect(d.getUTCDate()).toBe(1);
+  });
+});
+
+describe('fromLocalTime / toLocalTime round-trip', () => {
+  const cases: [number, number][] = [
+    [9, 30],
+    [0, 0],
+    [23, 59],
+    [16, 40],
+  ];
+
+  it.each(cases)('%i:%s round-trips through fromLocalTime → toLocalTime', (h, m) => {
+    const lt = localTime(h, m);
+    const roundTripped = toLocalTime(fromLocalTime(lt));
+    expect(roundTripped.toString()).toBe(lt.toString());
   });
 });
 
