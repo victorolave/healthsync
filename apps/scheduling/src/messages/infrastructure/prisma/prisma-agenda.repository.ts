@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Agenda } from '../../../domain';
 import type { AgendaRepository } from '../../application/agenda.repository';
 import { PrismaService } from './prisma.service';
-import { toAgenda } from './agenda.mapper';
+import { toAgenda, fromLocalTime } from './agenda.mapper';
 
 /**
  * Prisma-backed implementation of AgendaRepository.
@@ -13,13 +13,36 @@ import { toAgenda } from './agenda.mapper';
 export class PrismaAgendaRepository implements AgendaRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async saveAgenda(_doctorId: string, _date: Date, _agenda: Agenda): Promise<void> {
-    throw new Error(
-      'saveAgenda not implemented (Phase 4 / use in-memory demo)',
-    );
+  /**
+   * Apply-on-confirm persistence: replace the day's appointments with the
+   * post-recalculate set. Delete-then-insert inside one transaction so the
+   * no_double_booking EXCLUDE constraint never sees a transient overlap. Working
+   * hours are unchanged by a reschedule, so they are left as-is.
+   */
+  async saveAgenda(
+    doctorId: string,
+    date: Date,
+    agenda: Agenda,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.appointment.deleteMany({ where: { doctorId, day: date } }),
+      this.prisma.appointment.createMany({
+        data: agenda.appointments.map((appt) => ({
+          id: appt.id,
+          doctorId,
+          patientId: appt.patientId,
+          day: date,
+          startTime: fromLocalTime(appt.slot.start),
+          endTime: fromLocalTime(appt.slot.end),
+        })),
+      }),
+    ]);
   }
 
-  async findAgendaForDate(doctorId: string, date: Date): Promise<Agenda | null> {
+  async findAgendaForDate(
+    doctorId: string,
+    date: Date,
+  ): Promise<Agenda | null> {
     const wh = await this.prisma.workingHours.findUnique({
       where: { doctorId_day: { doctorId, day: date } },
     });

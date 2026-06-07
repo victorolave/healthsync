@@ -9,6 +9,16 @@ export function toLocalTime(t: Date) {
   return localTime(t.getUTCHours(), t.getUTCMinutes());
 }
 
+/**
+ * Inverse of toLocalTime: a domain LocalTime ('HH:MM') → a Date anchored at
+ * 1970-01-01 UTC, which Prisma stores into a TIME(0) column. UTC components keep
+ * the round-trip symmetric with toLocalTime (which reads getUTCHours/Minutes).
+ */
+export function fromLocalTime(lt: { toString(): string }): Date {
+  const [h, m] = lt.toString().split(':').map(Number);
+  return new Date(Date.UTC(1970, 0, 1, h, m, 0));
+}
+
 type WorkingHoursRow = {
   id: string;
   doctorId: string;
