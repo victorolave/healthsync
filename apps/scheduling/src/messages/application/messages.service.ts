@@ -4,7 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { PlannerRegistry } from '../../domain';
-import { recalculate, agenda, withSlot } from '../../domain';
+import { recalculate, agenda, withSlot, UnsupportedIntentError } from '../../domain';
 import type { MovePlanOperation } from '../../domain';
 import { MessageDto } from '../dto/message.dto';
 import type { PlanResponseDto } from '../dto/plan-response.dto';
@@ -35,9 +35,15 @@ export class MessagesService {
       throw new UnprocessableEntityException({ error: 'agenda_not_found' });
     }
 
-    const plan = recalculate(this.registry, ag, intent);
-
-    return mapPlanToDto(plan, confidence);
+    try {
+      const plan = recalculate(this.registry, ag, intent);
+      return mapPlanToDto(plan, confidence);
+    } catch (err) {
+      if (err instanceof UnsupportedIntentError) {
+        throw new UnprocessableEntityException({ error: 'unsupported_intent' });
+      }
+      throw err;
+    }
   }
 
   async getAgenda(): Promise<AgendaDto> {
@@ -58,7 +64,15 @@ export class MessagesService {
       throw new UnprocessableEntityException({ error: 'agenda_not_found' });
     }
 
-    const plan = recalculate(this.registry, ag, intent);
+    let plan;
+    try {
+      plan = recalculate(this.registry, ag, intent);
+    } catch (err) {
+      if (err instanceof UnsupportedIntentError) {
+        throw new UnprocessableEntityException({ error: 'unsupported_intent' });
+      }
+      throw err;
+    }
 
     // Build a lookup of appointmentId → target TimeSlot from the move operations
     const moveMap = new Map<string, MovePlanOperation>(
